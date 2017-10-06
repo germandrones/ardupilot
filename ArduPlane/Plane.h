@@ -111,6 +111,8 @@
 #include "avoidance_adsb.h"
 #include "AP_Arming.h"
 
+#include <AP_InertialNav/AP_InertialNav.h>
+
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
 #include <SITL/SITL.h>
 #endif
@@ -219,6 +221,8 @@ private:
 #else
     AP_AHRS_DCM ahrs = AP_AHRS_DCM::create(ins, barometer, gps);
 #endif
+
+    AP_InertialNav_NavEKF inertial_nav{ahrs};
 
     AP_TECS TECS_controller = AP_TECS::create(ahrs, aparm, landing, g2.soaring_controller);
     AP_L1_Control L1_controller = AP_L1_Control::create(ahrs, &TECS_controller);
@@ -806,6 +810,7 @@ private:
     void update_sensor_status_flags(void);
     void send_extended_status1(mavlink_channel_t chan);
     void send_location(mavlink_channel_t chan);
+    void send_location_neitzke(mavlink_channel_t chan);
     void send_nav_controller_output(mavlink_channel_t chan);
     void send_position_target_global_int(mavlink_channel_t chan);
     void send_servo_out(mavlink_channel_t chan);
