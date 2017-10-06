@@ -485,18 +485,19 @@ bool GCS_MAVLINK::is_message_nesesary_for_np(enum ap_message id)
 		case	MSG_MISSION_ITEM_REACHED:
 		case 	MSG_LOCATION_NEITZKE:
 
+		case	MSG_CURRENT_WAYPOINT:
+		case	MSG_NEXT_WAYPOINT:
+
 			return true;
 
 		case	MSG_LOCATION:
 		case	MSG_EXTENDED_STATUS1:
 		case	MSG_EXTENDED_STATUS2:
 		case	MSG_NAV_CONTROLLER_OUTPUT:
-		case	MSG_CURRENT_WAYPOINT:
 		case	MSG_RAW_IMU1:
 		case	MSG_RAW_IMU2:
 		case	MSG_RAW_IMU3:
 		case	MSG_SERVO_OUT:
-		case	MSG_NEXT_WAYPOINT:
 		// case	MSG_STATUSTEXT: not implemented anymore
 		case	MSG_LIMITS_STATUS:
 		case	MSG_FENCE_STATUS:
