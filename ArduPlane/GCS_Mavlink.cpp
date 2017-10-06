@@ -468,6 +468,12 @@ bool GCS_MAVLINK::is_message_nesesary_for_np(enum ap_message id)
 	{
 
 		case	MSG_ATTITUDE:
+
+			if (neitzke_system_status < MAV_STATE_STANDBY)
+				return true;
+			else
+				return false;
+
 		case	MSG_VFR_HUD:
 		case	MSG_GPS_RAW:
 		case	MSG_WIND:
@@ -548,7 +554,7 @@ bool GCS_MAVLINK_Plane::try_send_message(enum ap_message id)
         return false;
     }
 
-    if (NeitzkePilot_detected && !is_message_nesesary_for_np(id))
+    if (neitzkePilot_detected && !is_message_nesesary_for_np(id))
     	return true;
 
     switch (id) {
@@ -576,7 +582,7 @@ bool GCS_MAVLINK_Plane::try_send_message(enum ap_message id)
         break;
 
 	case MSG_LOCATION_NEITZKE:
-		if (!NeitzkePilot_detected)
+		if (!neitzkePilot_detected)
 			break;
 		CHECK_PAYLOAD_SIZE(LOCAL_POSITION_NEITZKE);
 		plane.send_location_neitzke(chan);
@@ -1668,8 +1674,12 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
         // We keep track of the last time we received a heartbeat from
         // our GCS for failsafe purposes
 
-    	if (msg->sysid == 12) //hardcoded sysid, should be same as the one in NeitzkePilot
-    		NeitzkePilot_detected = true;
+		if (msg->sysid == 12) {//hardcoded sysid, should be same as the one in NeitzkePilot
+			neitzkePilot_detected = true;
+			mavlink_heartbeat_t msgHeartbeat;
+			mavlink_msg_heartbeat_decode(msg, &msgHeartbeat);
+			neitzke_system_status = (MAV_STATE)msgHeartbeat.system_status;
+		}
 
         if (msg->sysid != plane.g.sysid_my_gcs) break;
         plane.failsafe.last_heartbeat_ms = AP_HAL::millis();

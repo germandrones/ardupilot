@@ -42,7 +42,7 @@ GCS *GCS::_singleton = nullptr;
 GCS_MAVLINK::GCS_MAVLINK()
 {
     AP_Param::setup_object_defaults(this, var_info);
-    NeitzkePilot_detected = false;
+    neitzkePilot_detected = false;
 }
 
 void
@@ -969,7 +969,7 @@ void GCS_MAVLINK::send_radio_in(uint8_t receiver_rssi)
     }
 
     // Do not send the 18 chan rc to Neitzke
-    if (NeitzkePilot_detected) return;
+    if (neitzkePilot_detected) return;
 
     mavlink_msg_rc_channels_send(
         chan,

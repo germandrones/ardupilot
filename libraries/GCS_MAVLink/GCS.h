@@ -254,7 +254,10 @@ protected:
     AP_Int16        streamRates[NUM_STREAMS];
 
     //flag indicate whether this port is connected to NeitzkePilot
-    bool NeitzkePilot_detected;
+    bool neitzkePilot_detected;
+
+    // indicate which system status is neitzke
+    MAV_STATE neitzke_system_status;
 
     void handle_request_data_stream(mavlink_message_t *msg, bool save);
 
