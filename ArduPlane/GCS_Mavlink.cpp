@@ -472,6 +472,7 @@ bool GCS_MAVLINK::is_message_nesesary_for_np(enum ap_message id)
 		case	MSG_GPS_RAW:
 		case	MSG_WIND:
 		case	MSG_SYSTEM_TIME:
+		case	MSG_NEXT_PARAM:
 		// case	MSG_RADIO_OUT: TODO: To be implemented
 		case	MSG_RADIO_IN:
 		case 	MSG_HEARTBEAT:
@@ -490,7 +491,6 @@ bool GCS_MAVLINK::is_message_nesesary_for_np(enum ap_message id)
 		case	MSG_RAW_IMU3:
 		case	MSG_SERVO_OUT:
 		case	MSG_NEXT_WAYPOINT:
-		case	MSG_NEXT_PARAM:
 		// case	MSG_STATUSTEXT: not implemented anymore
 		case	MSG_LIMITS_STATUS:
 		case	MSG_FENCE_STATUS:
