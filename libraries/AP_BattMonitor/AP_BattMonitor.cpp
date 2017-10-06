@@ -3,6 +3,7 @@
 #include "AP_BattMonitor_SMBus.h"
 #include "AP_BattMonitor_Bebop.h"
 #include <AP_Vehicle/AP_Vehicle_Type.h>
+#include "AP_BattMonitor_Serial_Unilog.h"
 
 extern const AP_HAL::HAL& hal;
 
@@ -170,16 +171,19 @@ AP_BattMonitor::AP_BattMonitor(void) :
     _num_instances(0)
 {
     AP_Param::setup_object_defaults(this, var_info);
+    _serial_manager = NULL;
 }
 
 // init - instantiate the battery monitors
-void
-AP_BattMonitor::init()
+// void AP_BattMonitor::init()
+void AP_BattMonitor::init(const AP_SerialManager* serial_manager)
 {
     // check init has not been called before
     if (_num_instances != 0) {
         return;
     }
+
+    _serial_manager = serial_manager;
 
 #if CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_BEBOP || CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_DISCO
     // force monitor for bebop
@@ -218,6 +222,13 @@ AP_BattMonitor::init()
                 _num_instances++;
 #endif
                 break;
+
+			case BattMonitor_TYPE_SERIAL_UNILOG:
+				state[instance].instance = instance;
+				drivers[instance] = new AP_BattMonitor_Serial_UniLog(*this, instance, state[instance], _serial_manager);
+				_num_instances++;
+				break;
+
         }
 
         // call init function for each backend

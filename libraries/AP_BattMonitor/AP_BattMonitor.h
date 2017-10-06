@@ -3,6 +3,7 @@
 #include <AP_Common/AP_Common.h>
 #include <AP_Param/AP_Param.h>
 #include <AP_Math/AP_Math.h>
+#include <AP_SerialManager/AP_SerialManager.h>
 #include <GCS_MAVLink/GCS_MAVLink.h>
 
 // maximum number of battery monitors
@@ -52,7 +53,8 @@ public:
         BattMonitor_TYPE_ANALOG_VOLTAGE_AND_CURRENT = 4,
         BattMonitor_TYPE_SOLO                       = 5,
         BattMonitor_TYPE_BEBOP                      = 6,
-        BattMonitor_TYPE_MAXELL                     = 7
+        BattMonitor_TYPE_MAXELL                     = 7,
+		BattMonitor_TYPE_SERIAL_UNILOG              = 8
     };
 
     // low voltage sources (used for BATT_LOW_TYPE parameter)
@@ -86,7 +88,8 @@ public:
     uint8_t num_instances(void) const { return _num_instances; }
 
     // detect and initialise any available battery monitors
-    void init();
+    // void init();
+    void init(const AP_SerialManager* serial_manager);
 
     /// Read the battery voltage and current for all batteries.  Should be called at 10hz
     void read();
@@ -184,4 +187,5 @@ private:
     BattMonitor_State state[AP_BATT_MONITOR_MAX_INSTANCES];
     AP_BattMonitor_Backend *drivers[AP_BATT_MONITOR_MAX_INSTANCES];
     uint8_t     _num_instances;                                     /// number of monitors
+    const AP_SerialManager* _serial_manager;
 };
