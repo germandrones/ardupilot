@@ -716,6 +716,8 @@ bool GCS_MAVLINK::handle_mission_item(mavlink_message_t *msg, AP_Mission &missio
     waypoint_request_i++;
     
     if (waypoint_request_i >= waypoint_request_last) {
+
+    	/**
         mavlink_msg_mission_ack_send_buf(
             msg,
             chan,
@@ -723,6 +725,23 @@ bool GCS_MAVLINK::handle_mission_item(mavlink_message_t *msg, AP_Mission &missio
             msg->compid,
             MAV_MISSION_ACCEPTED,
             MAV_MISSION_TYPE_MISSION);
+        */
+
+		// send the Ack to all mavlink ports
+		for (uint8_t i=0; i<MAVLINK_COMM_NUM_BUFFERS; i++) {
+			if ((1U<<i) & mavlink_active) {
+				mavlink_channel_t chan_cast = (mavlink_channel_t)(MAVLINK_COMM_0+i);
+				if (comm_get_txspace(chan_cast) >= MAVLINK_NUM_NON_PAYLOAD_BYTES + MAVLINK_MSG_ID_PARAM_VALUE_LEN) {
+					mavlink_msg_mission_ack_send_buf(
+						msg,
+						chan_cast,
+						msg->sysid,
+						msg->compid,
+						MAV_MISSION_ACCEPTED,
+						MAV_MISSION_TYPE_MISSION); // Todo: Check on GDPilot side this extra parameter
+				}
+			}
+		}
         
         send_text(MAV_SEVERITY_INFO,"Flight plan received");
         waypoint_receiving = false;
