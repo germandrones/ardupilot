@@ -462,6 +462,77 @@ uint32_t GCS_MAVLINK_Plane::telem_delay() const
     return (uint32_t)(plane.g.telem_delay);
 }
 
+bool GCS_MAVLINK::is_message_nesesary_for_np(enum ap_message id)
+{
+	switch(id)
+	{
+
+		case	MSG_ATTITUDE:
+		case	MSG_VFR_HUD:
+		case	MSG_GPS_RAW:
+		case	MSG_WIND:
+		case	MSG_SYSTEM_TIME:
+		// case	MSG_RADIO_OUT: TODO: To be implemented
+		case	MSG_RADIO_IN:
+		case 	MSG_HEARTBEAT:
+		case	MSG_MISSION_ITEM_REACHED:
+		case 	MSG_LOCATION_NEITZKE:
+
+			return true;
+
+		case	MSG_LOCATION:
+		case	MSG_EXTENDED_STATUS1:
+		case	MSG_EXTENDED_STATUS2:
+		case	MSG_NAV_CONTROLLER_OUTPUT:
+		case	MSG_CURRENT_WAYPOINT:
+		case	MSG_RAW_IMU1:
+		case	MSG_RAW_IMU2:
+		case	MSG_RAW_IMU3:
+		case	MSG_SERVO_OUT:
+		case	MSG_NEXT_WAYPOINT:
+		case	MSG_NEXT_PARAM:
+		// case	MSG_STATUSTEXT: not implemented anymore
+		case	MSG_LIMITS_STATUS:
+		case	MSG_FENCE_STATUS:
+		case	MSG_AHRS:
+		case	MSG_SIMSTATE:
+		case	MSG_HWSTATUS:
+		case	MSG_RANGEFINDER:
+		case	MSG_TERRAIN:
+		case	MSG_BATTERY2:
+		case	MSG_CAMERA_FEEDBACK:
+		case	MSG_MOUNT_STATUS:
+		case	MSG_OPTICAL_FLOW:
+		case	MSG_GIMBAL_REPORT:
+		case	MSG_MAG_CAL_PROGRESS:
+		case	MSG_MAG_CAL_REPORT:
+		case	MSG_EKF_STATUS_REPORT:
+		case	MSG_LOCAL_POSITION:
+		case	MSG_PID_TUNING:
+		case	MSG_VIBRATION:
+		case	MSG_RPM:
+		// New values concerning Ardupilot 3.8.0 that are not used by Neitzke anyway
+		case MSG_SERVO_OUTPUT_RAW:
+		case MSG_GPS_RTK:
+		case MSG_GPS2_RAW:
+		case MSG_GPS2_RTK:
+		case MSG_POSITION_TARGET_GLOBAL_INT:
+		case MSG_ADSB_VEHICLE:
+		case MSG_BATTERY_STATUS:
+		case MSG_AOA_SSA:
+		case MSG_LANDING:
+		case MSG_NAMED_FLOAT:
+		case MSG_LAST:
+
+			return false;
+
+	}
+
+	return false;
+
+}
+
+
 // try to send a message, return false if it won't fit in the serial tx buffer
 bool GCS_MAVLINK_Plane::try_send_message(enum ap_message id)
 {
@@ -476,6 +547,9 @@ bool GCS_MAVLINK_Plane::try_send_message(enum ap_message id)
         gcs().set_out_of_time(true);
         return false;
     }
+
+    if (NeitzkePilot_detected && !is_message_nesesary_for_np(id))
+    	return true;
 
     switch (id) {
     case MSG_HEARTBEAT:
@@ -502,6 +576,8 @@ bool GCS_MAVLINK_Plane::try_send_message(enum ap_message id)
         break;
 
 	case MSG_LOCATION_NEITZKE:
+		if (!NeitzkePilot_detected)
+			break;
 		CHECK_PAYLOAD_SIZE(LOCAL_POSITION_NEITZKE);
 		plane.send_location_neitzke(chan);
 	break;
@@ -1591,6 +1667,10 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
     {
         // We keep track of the last time we received a heartbeat from
         // our GCS for failsafe purposes
+
+    	if (msg->sysid == 12) //hardcoded sysid, should be same as the one in NeitzkePilot
+    		NeitzkePilot_detected = true;
+
         if (msg->sysid != plane.g.sysid_my_gcs) break;
         plane.failsafe.last_heartbeat_ms = AP_HAL::millis();
         break;

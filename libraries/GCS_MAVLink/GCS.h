@@ -140,6 +140,8 @@ public:
     // return true if this channel has hardware flow control
     bool have_flow_control();
 
+    bool is_message_nesesary_for_np(enum ap_message id);
+
     mavlink_channel_t get_chan() const { return chan; }
     uint32_t get_last_heartbeat_time() const { return last_heartbeat_time; };
 
@@ -250,6 +252,9 @@ protected:
 
     // saveable rate of each stream
     AP_Int16        streamRates[NUM_STREAMS];
+
+    //flag indicate whether this port is connected to NeitzkePilot
+    bool NeitzkePilot_detected;
 
     void handle_request_data_stream(mavlink_message_t *msg, bool save);
 
