@@ -257,7 +257,7 @@ protected:
     bool neitzkePilot_detected;
 
     // indicate which system status is neitzke
-    MAV_STATE neitzke_system_status;
+    MAV_STATE gdpilot_system_status;
 
     void handle_request_data_stream(mavlink_message_t *msg, bool save);
 

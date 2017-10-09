@@ -468,8 +468,7 @@ bool GCS_MAVLINK::is_message_nesesary_for_np(enum ap_message id)
 	{
 
 		case	MSG_ATTITUDE:
-
-			if (neitzke_system_status < MAV_STATE_STANDBY)
+			if (gdpilot_system_status < MAV_STATE_STANDBY)
 				return true;
 			else
 				return false;
@@ -1679,7 +1678,11 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
 			neitzkePilot_detected = true;
 			mavlink_heartbeat_t msgHeartbeat;
 			mavlink_msg_heartbeat_decode(msg, &msgHeartbeat);
-			neitzke_system_status = (MAV_STATE)msgHeartbeat.system_status;
+			gdpilot_system_status = (MAV_STATE)msgHeartbeat.system_status;
+			if (gdpilot_system_status == MAV_STATE_ACTIVE)
+				plane.tilt_to_fwd = true;
+			else
+				plane.tilt_to_fwd = false;
 		}
 
         if (msg->sysid != plane.g.sysid_my_gcs) break;

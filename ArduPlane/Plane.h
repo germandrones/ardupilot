@@ -789,6 +789,9 @@ private:
     // time that rudder arming has been running
     uint32_t rudder_arm_timer;
 
+    // indicate whether the arm has tilt to fwd flight
+    bool tilt_to_fwd = false;
+
     // support for quadcopter-plane
     QuadPlane quadplane{ahrs};
 

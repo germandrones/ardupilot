@@ -61,6 +61,12 @@ bool Plane::suppress_throttle(void)
     }
 #endif
 
+    // I check the tilt_to_fwd considition at first. Before, it was after the (control_mode==AUTO && g.auto_fbw_steer == 42) condition
+    if (control_mode==AUTO && tilt_to_fwd)
+    {
+    	return false;
+    }
+
     if (landing.is_throttle_suppressed()) {
         return true;
     }
