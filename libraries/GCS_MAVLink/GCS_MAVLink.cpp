@@ -145,6 +145,9 @@ void comm_send_buffer(mavlink_channel_t chan, const uint8_t *buf, uint8_t len)
     if (!valid_channel(chan)) {
         return;
     }
+    // Comment the following line for suppressing all the mavlink messages on the USB port.
+    // Note: Doing so, it will not be possible to connect to Mission Planner anymore.
+    // FOR DEBUG ONLY
     mavlink_comm_port[chan]->write(buf, len);
 }
 

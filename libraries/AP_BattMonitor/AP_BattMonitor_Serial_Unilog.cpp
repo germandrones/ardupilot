@@ -1,8 +1,7 @@
 #include "AP_BattMonitor_Serial_Unilog.h"
 #include <AP_HAL/AP_HAL.h>
 
-// extern const AP_HAL::HAL& hal;
-
+extern const AP_HAL::HAL& hal;
 
 AP_BattMonitor_Serial_UniLog::AP_BattMonitor_Serial_UniLog(AP_BattMonitor &mon, uint8_t instance, AP_BattMonitor::BattMonitor_State &mon_state, const AP_SerialManager* serial_manager) :
 	AP_BattMonitor_Backend(mon, mon_state)
@@ -85,7 +84,7 @@ void AP_BattMonitor_Serial_UniLog::read()
 
 void AP_BattMonitor_Serial_UniLog::initializeComm() const
 {
-	_port->println("g"); // Todo: Check this. Before it was port->println_P("g");
+	_port->println("g");
 }
 
 int8_t AP_BattMonitor_Serial_UniLog::waitForInitialization() const

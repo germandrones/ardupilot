@@ -19,6 +19,10 @@ static void failsafe_check_static()
 
 void Plane::init_ardupilot()
 {
+
+	// This delay is to make sure that all the messages are printed on the UART over USB
+	// hal.scheduler->delay(4000);
+
     // initialise serial port
     serial_manager.init_console();
 
@@ -204,6 +208,7 @@ void Plane::init_ardupilot()
 
     // disable safety if requested
     BoardConfig.init_safety();
+
 }
 
 //********************************************************************************
