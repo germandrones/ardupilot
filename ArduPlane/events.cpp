@@ -14,6 +14,7 @@ void Plane::failsafe_short_on_event(enum failsafe_state fstype, mode_reason_t re
     case FLY_BY_WIRE_A:
     case AUTOTUNE:
     case FLY_BY_WIRE_B:
+    case FLY_BY_WIRE_C:
     case CRUISE:
     case TRAINING:
         failsafe.saved_mode = control_mode;
@@ -73,6 +74,7 @@ void Plane::failsafe_long_on_event(enum failsafe_state fstype, mode_reason_t rea
     case FLY_BY_WIRE_A:
     case AUTOTUNE:
     case FLY_BY_WIRE_B:
+    case FLY_BY_WIRE_C:
     case CRUISE:
     case TRAINING:
     case CIRCLE:

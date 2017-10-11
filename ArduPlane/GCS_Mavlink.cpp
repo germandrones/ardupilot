@@ -36,6 +36,7 @@ void Plane::send_heartbeat(mavlink_channel_t chan)
     case FLY_BY_WIRE_A:
     case AUTOTUNE:
     case FLY_BY_WIRE_B:
+    case FLY_BY_WIRE_C:
     case QSTABILIZE:
     case QHOVER:
     case QLOITER:
@@ -189,7 +190,7 @@ void Plane::send_location_neitzke(mavlink_channel_t chan)
 	const Vector3f& curr_pos = inertial_nav.get_position();
 	// NEU frame:
 	/*   @return velocity vector:
-	 *      		.x : latitude  velocity in cm/s
+	 *      	.x : latitude  velocity in cm/s
 	 * 			.y : longitude velocity in cm/s
 	 * 			.z : vertical  velocity in cm/s
 	 */

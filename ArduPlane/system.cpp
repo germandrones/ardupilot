@@ -377,6 +377,11 @@ void Plane::set_mode(enum FlightMode mode, mode_reason_t reason)
         set_target_altitude_current();
         break;
 
+    case FLY_BY_WIRE_C:
+    		auto_throttle_mode = true;
+    		set_target_altitude_current();
+		break;
+
     case CIRCLE:
         // the altitude to circle at is taken from the current altitude
         auto_throttle_mode = true;
@@ -616,6 +621,9 @@ void Plane::notify_flight_mode(enum FlightMode mode)
         break;
     case FLY_BY_WIRE_B:
         notify.set_flight_mode_str("FBWB");
+        break;
+    case FLY_BY_WIRE_C:
+        notify.set_flight_mode_str("FBWC");
         break;
     case CRUISE:
         notify.set_flight_mode_str("CRUS");

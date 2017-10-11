@@ -249,6 +249,7 @@ void Plane::update_sensor_status_flags(void)
         break;
 
     case FLY_BY_WIRE_B:
+    case FLY_BY_WIRE_C:
     case CRUISE:
         control_sensors_enabled |= MAV_SYS_STATUS_SENSOR_ANGULAR_RATE_CONTROL; // 3D angular rate control
         control_sensors_enabled |= MAV_SYS_STATUS_SENSOR_ATTITUDE_STABILIZATION; // attitude stabilisation
