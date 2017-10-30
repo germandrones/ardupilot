@@ -399,7 +399,9 @@ void Plane::set_mode(enum FlightMode mode, mode_reason_t reason)
         }
         next_WP_loc = prev_WP_loc = current_loc;
         // start or resume the mission, based on MIS_AUTORESET
-        mission.start_or_resume();
+        // mission.start_or_resume();
+
+        mission.resume();
 		
         g2.soaring_controller.init_cruising();
         break;
@@ -453,7 +455,7 @@ void Plane::set_mode(enum FlightMode mode, mode_reason_t reason)
     }
 
     // start with throttle suppressed in auto_throttle modes
-    throttle_suppressed = auto_throttle_mode;
+    throttle_suppressed = false; // auto_throttle_mode;
 
     adsb.set_is_auto_mode(auto_navigation_mode);
 

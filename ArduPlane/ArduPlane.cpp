@@ -538,13 +538,30 @@ void Plane::handle_auto_mode(void)
 
     nav_cmd_id = mission.get_current_nav_cmd().id;
 
+	// If we are in auto mode, and the current waypoint is takeoff, I move the mission forward by one item as soon as the arms are tilted
+	/**
+    if(control_mode==AUTO && tilt_to_fwd && nav_cmd_id == MAV_CMD_NAV_TAKEOFF)
+	{
+		AP_Mission::Mission_Command next_nav_cmd;
+		const uint16_t next_index = mission.get_current_nav_index() + 1;
+		mission.get_next_nav_cmd(next_index, next_nav_cmd);
+		mission.set_current_cmd(next_index);
+		gcs().send_text(MAV_SEVERITY_NOTICE, "1- TRANSITION AND 1ST NAV WP");
+	}
+	*/
+
+	//if(throttle_suppressed)
+	//	gcs().send_text(MAV_SEVERITY_WARNING, "THROTTLE SUPPRESSED");
+
     if (quadplane.in_vtol_auto()) {
         quadplane.control_auto(next_WP_loc);
     } else if (nav_cmd_id == MAV_CMD_NAV_TAKEOFF ||
         (nav_cmd_id == MAV_CMD_NAV_LAND && flight_stage == AP_Vehicle::FixedWing::FLIGHT_ABORT_LAND)) {
-        takeoff_calc_roll();
+    	gcs().send_text(MAV_SEVERITY_NOTICE, "Auto-Takeoff/land wp");
+    	takeoff_calc_roll();
         takeoff_calc_pitch();
         calc_throttle();
+
     } else if (nav_cmd_id == MAV_CMD_NAV_LAND) {
         calc_nav_roll();
         calc_nav_pitch();
@@ -568,6 +585,7 @@ void Plane::handle_auto_mode(void)
         calc_nav_pitch();
         calc_throttle();
     }
+
 }
 
 /*

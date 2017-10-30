@@ -81,6 +81,7 @@ enum ap_message {
     MSG_AOA_SSA,
     MSG_LANDING,
     MSG_NAMED_FLOAT,
+	MSG_RADIO_OUT, // The new version of ardupilot doesn't have a MSG_RADIO_OUT anymore. This is required for auto flight mode and it has been restored.
 	MSG_LOCATION_NEITZKE, //keep this at the end of the enum (just before MSG_LAST)
     MSG_LAST // MSG_LAST must be the last entry in this enum
 };

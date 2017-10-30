@@ -50,11 +50,11 @@ public:
     enum BattMonitor_Type {
         BattMonitor_TYPE_NONE                       = 0,
         BattMonitor_TYPE_ANALOG_VOLTAGE_ONLY        = 3,
-		BattMonitor_TYPE_SERIAL_UNILOG				= 4,
+		BattMonitor_TYPE_ANALOG_VOLTAGE_AND_CURRENT = 4,
         BattMonitor_TYPE_SOLO                       = 5,
         BattMonitor_TYPE_BEBOP                      = 6,
         BattMonitor_TYPE_MAXELL                     = 7,
-		BattMonitor_TYPE_ANALOG_VOLTAGE_AND_CURRENT = 8
+		BattMonitor_TYPE_SERIAL_UNILOG              = 8
     };
 
     // low voltage sources (used for BATT_LOW_TYPE parameter)

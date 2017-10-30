@@ -8,13 +8,44 @@ bool Plane::start_command(const AP_Mission::Mission_Command& cmd)
     // default to non-VTOL loiter
     auto_state.vtol_loiter = false;
 
-        // log when new commands start
+    // log when new commands start
     if (should_log(MASK_LOG_CMD)) {
         DataFlash.Log_Write_Mission_Cmd(mission, cmd);
     }
 
     // special handling for nav vs non-nav commands
-    if (AP_Mission::is_nav_cmd(cmd)) {
+
+	// If we are in auto mode, the arms are tilted and the current waypoint is takeoff, I move the mission forward by one item.
+	if(cmd.id == MAV_CMD_NAV_TAKEOFF && tilt_to_fwd)
+	{
+
+        // set land_complete to false to stop us zeroing the throttle
+        auto_state.sink_rate = 0;
+
+        // set takeoff_complete to true so we don't add extra elevator
+        // except in a takeoff
+        auto_state.takeoff_complete = true;
+
+        // start non-idle
+        auto_state.idle_mode = false;
+
+        nav_controller->set_data_is_stale();
+
+        // reset loiter start time. New command is a new loiter
+        loiter.start_time_ms = 0;
+
+        AP_Mission::Mission_Command next_nav_cmd;
+        const uint16_t next_index = mission.get_current_nav_index() + 1;
+        auto_state.wp_is_land_approach = mission.get_next_nav_cmd(next_index, next_nav_cmd) && (next_nav_cmd.id == MAV_CMD_NAV_LAND);
+
+		//mission.get_next_nav_cmd(next_index, next_nav_cmd);
+        set_next_WP(next_nav_cmd.content.location);
+		mission.set_current_cmd(next_index);
+		gcs().send_text(MAV_SEVERITY_NOTICE, "Detected transition");
+		gcs().send_text(MAV_SEVERITY_NOTICE, "Mission set to the first nav waypoint");
+	}
+
+    if (AP_Mission::is_nav_cmd(cmd) && cmd.id != MAV_CMD_NAV_TAKEOFF) {
         // set land_complete to false to stop us zeroing the throttle
         auto_state.sink_rate = 0;
 
@@ -34,9 +65,9 @@ bool Plane::start_command(const AP_Mission::Mission_Command& cmd)
         const uint16_t next_index = mission.get_current_nav_index() + 1;
         auto_state.wp_is_land_approach = mission.get_next_nav_cmd(next_index, next_nav_cmd) && (next_nav_cmd.id == MAV_CMD_NAV_LAND);
 
-        gcs().send_text(MAV_SEVERITY_INFO, "Executing nav command ID #%i",cmd.id);
+        gcs().send_text(MAV_SEVERITY_INFO, "Executing nav command ID #%i, %i",cmd.id, cmd.index);
     } else {
-        gcs().send_text(MAV_SEVERITY_INFO, "Executing command ID #%i",cmd.id);
+        gcs().send_text(MAV_SEVERITY_INFO, "Executing command ID #%i, %i ",cmd.id, cmd.index);
     }
 
     switch(cmd.id) {

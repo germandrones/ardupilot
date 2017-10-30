@@ -211,6 +211,32 @@ void Plane::send_location_neitzke(mavlink_channel_t chan)
 			(int8_t)plane.flight_stage);
 }
 
+void Plane::send_radio_out(mavlink_channel_t chan)
+{
+
+    mavlink_msg_servo_output_raw_send(
+        chan,
+		AP_HAL::micros(),
+        0,     // port
+        hal.rcout->read(0),
+        hal.rcout->read(1),
+        hal.rcout->read(2),
+        hal.rcout->read(3),
+        hal.rcout->read(4),
+        hal.rcout->read(5),
+        hal.rcout->read(6),
+        hal.rcout->read(7),
+        hal.rcout->read(8),
+        hal.rcout->read(9),
+        hal.rcout->read(10),
+        hal.rcout->read(11),
+        hal.rcout->read(12),
+        hal.rcout->read(13),
+        hal.rcout->read(14),
+        hal.rcout->read(15)
+	);
+}
+
 void Plane::send_location(mavlink_channel_t chan)
 {
     uint32_t fix_time_ms;
@@ -479,7 +505,7 @@ bool GCS_MAVLINK::is_message_nesesary_for_np(enum ap_message id)
 		case	MSG_WIND:
 		case	MSG_SYSTEM_TIME:
 		case	MSG_NEXT_PARAM:
-		// case	MSG_RADIO_OUT: TODO: To be implemented
+		case	MSG_RADIO_OUT:
 		case	MSG_RADIO_IN:
 		case 	MSG_HEARTBEAT:
 		case	MSG_MISSION_ITEM_REACHED:
@@ -620,6 +646,12 @@ bool GCS_MAVLINK_Plane::try_send_message(enum ap_message id)
     case MSG_RADIO_IN:
         CHECK_PAYLOAD_SIZE(RC_CHANNELS);
         send_radio_in(plane.receiver_rssi);
+        break;
+
+
+    case MSG_RADIO_OUT:
+        CHECK_PAYLOAD_SIZE(SERVO_OUTPUT_RAW);
+        plane.send_radio_out(chan);
         break;
 
     case MSG_SERVO_OUTPUT_RAW:
@@ -930,6 +962,7 @@ GCS_MAVLINK_Plane::data_stream_send(void)
     if (stream_trigger(STREAM_RC_CHANNELS)) {
         send_message(MSG_SERVO_OUTPUT_RAW);
         send_message(MSG_RADIO_IN);
+        send_message(MSG_RADIO_OUT);
     }
 
     if (gcs().out_of_time()) return;
@@ -1681,9 +1714,16 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
 			mavlink_msg_heartbeat_decode(msg, &msgHeartbeat);
 			gdpilot_system_status = (MAV_STATE)msgHeartbeat.system_status;
 			if (gdpilot_system_status == MAV_STATE_ACTIVE)
+			{
+				// This variable becomes true only when we are in FBWA and AUTO mode
 				plane.tilt_to_fwd = true;
+				// gcs().send_text(MAV_SEVERITY_INFO, "TILT TO FWD - TRUE");
+			}
 			else
+			{
 				plane.tilt_to_fwd = false;
+				// gcs().send_text(MAV_SEVERITY_INFO, "TILT TO FWD - FALSE");
+			}
 		}
 
         if (msg->sysid != plane.g.sysid_my_gcs) break;
