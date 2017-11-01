@@ -417,10 +417,6 @@ void Plane::one_time_rewrite()
 	gcs().send_text(MAV_SEVERITY_NOTICE, "Idx Last MWP: %d",headwind_wp.get_idx_last_mission_wp());
 	gcs().send_text(MAV_SEVERITY_NOTICE, "Idx VWP: %d",headwind_wp.get_idx_hwp());
 
-	gcs().send_text(MAV_SEVERITY_NOTICE, "dist_vwpl_1: %f",headwind_wp.get_dist_hwpl_1());
-	gcs().send_text(MAV_SEVERITY_NOTICE, "dist_vwpl_2: %f",headwind_wp.get_dist_hwpl_2());
-	gcs().send_text(MAV_SEVERITY_NOTICE, "dist_vwpl_3: %f",headwind_wp.get_dist_hwpl_3());
-
     // Currently, if the index calculation fails, we do nothing.
     // We could think about aborting the mission in some particular circumstances.
     if(headwind_wp.hwp_error == HWP_NO_ERROR)

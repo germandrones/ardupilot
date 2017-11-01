@@ -220,7 +220,7 @@ void AP_HeadWindLanding::generate_hw_waypoints(const AP_Mission::Mission_Command
 	_ahrs.get_NavEKF2().getWind(0,wind);
 
 	float modWind = sqrt(wind.x*wind.x+wind.y*wind.y);
-	gcs().send_text(MAV_SEVERITY_NOTICE, "WIND_SPD:%5.2f",modWind);
+	gcs().send_text(MAV_SEVERITY_NOTICE, "WIND_SPD:%f",modWind);
 	// -------------------------------------------------------------------------------
 
 	// Default distance of VWP when there is no wind
@@ -234,27 +234,12 @@ void AP_HeadWindLanding::generate_hw_waypoints(const AP_Mission::Mission_Command
 	new_theta_hwp = thetaWind + heading_wind*DEG_TO_RAD;
 	// GCS_SEND_MSG("WIND_DIR:%f",thetaWind*180.0f/3.1415f);
 
-
-	// GCS_SEND_MSG("OLD L_WP:%10.6f,%10.6f,%8.3f",land_wp_lat,land_wp_lng,land_wp_alt);
-	// GCS_SEND_MSG("VWPS_DIRd:%f",new_theta_vwp*180.0f/3.1415f);
-
-	// --------------------------------------------------------------------------------
-	// Difference of altitude between the landing waypoint and the last mission waypoint (in cm)
-	float altitude_diff = wp.content.location.alt - last_mwp.content.location.alt;
-	float step = 0.0f;
-
-	// GCS_SEND_MSG("ALT DIFF, STEP:%f,%f",altitude_diff,step);
-
-	// Making sure we are not dividing by zero
-	if( (hwp_cfg.num_hwp-1) > 0)
-	    step = altitude_diff / (hwp_cfg.num_hwp-1);
-
 	// Calculate the coordinates of the first virtual waypoint -----------------------
 	loc_hwp1.lat = land_wp.lat + dist_hwpl_1*cos(new_theta_hwp) / mdlat * 10000000.0f;
 	loc_hwp1.lng = land_wp.lng + dist_hwpl_1*sin(new_theta_hwp) / mdlng * 10000000.0f;
 	// The altitude is the same as the altitude of the last waypoint mission
-	loc_hwp1.alt = last_mwp.content.location.alt + 3*step;
-	loc_hwp1.options = 1<<0;
+	loc_hwp1.alt = land_wp.alt;
+	loc_hwp1.options = 1<<0; // Relative altitude
 
 	// Print and save info about vwp1
 	// float hwp1_lat = loc_hwp1.lat*TO_DEG_FORMAT;
@@ -267,7 +252,7 @@ void AP_HeadWindLanding::generate_hw_waypoints(const AP_Mission::Mission_Command
 	loc_hwp2.lat = land_wp.lat + dist_hwpl_2*cos(new_theta_hwp) / mdlat * 10000000.0f;
 	loc_hwp2.lng = land_wp.lng + dist_hwpl_2*sin(new_theta_hwp) / mdlng * 10000000.0f;
 	// The altitude is the same as the altitude of the last waypoint mission
-	loc_hwp2.alt = last_mwp.content.location.alt + 2*step;
+	loc_hwp2.alt = land_wp.alt;
 	loc_hwp2.options = 1<<0;
 
 	// Print and save info about vwp2
@@ -292,8 +277,9 @@ void AP_HeadWindLanding::generate_hw_waypoints(const AP_Mission::Mission_Command
 	loc_hwp3.lat = land_wp.lat + dist_hwpl_3*cos(new_theta_hwp) / mdlat * 10000000.0f;
 	loc_hwp3.lng = land_wp.lng + dist_hwpl_3*sin(new_theta_hwp) / mdlng * 10000000.0f;
 	// The altitude is the same as the altitude of the last waypoint mission
-	loc_hwp3.alt = last_mwp.content.location.alt + step;
-	loc_hwp3.options = 1<<0;
+	loc_hwp3.alt = land_wp.alt;
+	loc_hwp3.flags.relative_alt = 1;
+	loc_hwp3.flags.loiter_xtrack = 1;
 
 	// float hwp3_lat = loc_hwp3.lat*TO_DEG_FORMAT;
 	// float hwp3_lng = loc_hwp3.lng*TO_DEG_FORMAT;
@@ -318,8 +304,10 @@ void AP_HeadWindLanding::generate_hw_waypoints(const AP_Mission::Mission_Command
 	// Copy all the properties of the last mission waypoint
 	hwp3 = last_mwp;
 	// Overwrite command id and waypoint coordinates
-	hwp3.id = MAV_CMD_NAV_WAYPOINT;
+	hwp3.id = MAV_CMD_NAV_LOITER_TO_ALT;
 	hwp3.content.location = loc_hwp3;
+	hwp3.p1 = 30;
+
 	// Add the new command to the mission
 
 	// AP_Mission::Mission_Command vwp2 = {};
