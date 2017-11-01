@@ -24,6 +24,11 @@
 
 #define SCHED_TASK(func, rate_hz, max_time_micros) SCHED_TASK_CLASS(Plane, &plane, func, rate_hz, max_time_micros)
 
+int one_sec_cnt = 0;
+int _flag_cnt = 0;
+bool mission_rewrote = false;
+bool mission_restored = false;
+bool hwp_status_printed = false;
 
 /*
   scheduler table - all regular tasks are listed here, along with how
@@ -316,6 +321,39 @@ void Plane::update_aux(void)
 
 void Plane::one_second_loop()
 {
+
+    if(!hwp_status_printed)
+    {
+
+		if(headwind_wp.is_hwp_enabled())
+			gcs().send_text(MAV_SEVERITY_NOTICE, "VWP enabled");
+		else
+			gcs().send_text(MAV_SEVERITY_NOTICE, "VWP disabled");
+
+			hwp_status_printed = true;
+	}
+
+	if(headwind_wp.is_hwp_enabled())
+	{
+		one_sec_cnt += 1;
+
+		// After 60 seconds from the startup, the virtual waypoints will be added
+		if(one_sec_cnt > 60 && !mission_rewrote)
+		{
+			gcs().send_text(MAV_SEVERITY_NOTICE, "Calling Mission Rewrite function");
+			one_time_rewrite();
+			mission_rewrote = true;
+		}
+
+		// The following section is used for restoring the original mission
+		if(one_sec_cnt > 120 && !mission_restored)
+		{
+			gcs().send_text(MAV_SEVERITY_NOTICE, "Calling Mission Restore function");
+			one_time_restore();
+			mission_restored = true;
+		}
+    }
+
     // send a heartbeat
     gcs().send_message(MSG_HEARTBEAT);
 
@@ -367,6 +405,61 @@ void Plane::one_second_loop()
     // indicates that the sensor or subsystem is present but not
     // functioning correctly
     update_sensor_status_flags();
+}
+
+void Plane::one_time_rewrite()
+{
+    // ========================================================================================
+    // Initialize the virtual waypoint procedure
+	headwind_wp.init_HWP();
+	gcs().send_text(MAV_SEVERITY_NOTICE, "Num commands: %d",headwind_wp.get_num_commands());
+	gcs().send_text(MAV_SEVERITY_NOTICE, "Idx Land WP: %d",headwind_wp.get_idx_landing_wp());
+	gcs().send_text(MAV_SEVERITY_NOTICE, "Idx Last MWP: %d",headwind_wp.get_idx_last_mission_wp());
+	gcs().send_text(MAV_SEVERITY_NOTICE, "Idx VWP: %d",headwind_wp.get_idx_hwp());
+
+	gcs().send_text(MAV_SEVERITY_NOTICE, "dist_vwpl_1: %f",headwind_wp.get_dist_hwpl_1());
+	gcs().send_text(MAV_SEVERITY_NOTICE, "dist_vwpl_2: %f",headwind_wp.get_dist_hwpl_2());
+	gcs().send_text(MAV_SEVERITY_NOTICE, "dist_vwpl_3: %f",headwind_wp.get_dist_hwpl_3());
+
+    // Currently, if the index calculation fails, we do nothing.
+    // We could think about aborting the mission in some particular circumstances.
+    if(headwind_wp.hwp_error == HWP_NO_ERROR)
+    {
+    	gcs().send_text(MAV_SEVERITY_NOTICE, "Index calculated correctly.");
+    }
+    else
+    {
+    	gcs().send_text(MAV_SEVERITY_NOTICE, "Error during index generation: %d",headwind_wp.hwp_error);
+    }
+    // ========================================================================================
+
+    AP_Mission::Mission_Command fake_cmd;
+    fake_cmd.index = headwind_wp.get_idx_hwp();
+
+    headwind_wp.generate_hw_waypoints(fake_cmd);
+    if(headwind_wp.hwp_status == HWP_GENERATED)
+    {
+    	gcs().send_text(MAV_SEVERITY_NOTICE, "HeadWind WP generated");
+    	gcs().send_text(MAV_SEVERITY_NOTICE, "Num commands: %d",headwind_wp.get_num_commands());
+    }
+
+    // ========================================================================================
+
+}
+
+void Plane::one_time_restore()
+{
+    // ========================================================================================
+    // After issuing the landing cmd the mission is restored to its original state
+	headwind_wp.restore_mission();
+    if(headwind_wp.hwp_status == HWP_REMOVED)
+    {
+    	gcs().send_text(MAV_SEVERITY_NOTICE, "Original mission restored");
+    	gcs().send_text(MAV_SEVERITY_NOTICE, "Num commands: %d",headwind_wp.get_num_commands());
+    }
+    else
+    	gcs().send_text(MAV_SEVERITY_NOTICE, "Error while restoring original mission");
+    // ========================================================================================
 }
 
 void Plane::log_perf_info()
