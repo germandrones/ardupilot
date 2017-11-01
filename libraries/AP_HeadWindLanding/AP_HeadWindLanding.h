@@ -19,12 +19,6 @@
 // Macro for calculating how many meters for 1 degree of longitude, given the current latitude in degrees.
 #define METERS_PER_DEG_LNG(lat) 111132.954*cos(lat*DEG_TO_RAD);
 
-// This the maximum variation of altitude between two consecutive virtual waypoints (value expressed in meters)
-#define MAX_STEP 20.0f
-#define MAX_STEP_CM MAX_STEP*100.0f
-
-#define MINIMUM_SPEED_DURING_VWP 10.0f
-
 // List of states concerning the generation of the virtual waypoints
 typedef enum vwp_generation_states {
 	HWP_NOT_GENERATED = 0,
@@ -69,9 +63,7 @@ public:
     /// returns 0 if the mission is shorter than the distance between landing waypoint and CMD_VWP
     void calc_index_hw_waypoints();
 
-    bool is_change_speed_cmd_issued(const AP_Mission::Mission_Command& cmd);
-
-    /// generate_virtual_waypoints - generates the virtual waypoints based on the current settings and the wind direction.
+    /// generate_hw_waypoints - generates the virtual waypoints based on the current settings and the wind direction.
     void generate_hw_waypoints(const AP_Mission::Mission_Command& cmd);
 
     /// update_num_commands - updates the variable containing the number of commands in the mission. This function is called after
@@ -89,8 +81,8 @@ public:
     AP_Float 	get_hwp_spd()			{ return hwp_spd; }
 
     AP_Float	get_dist_hwpl_1()		{ return dist_hwpl_1; }
-    AP_Float	get_dist_hwp1_2()		{ return dist_hwp1_2; }
-    AP_Float	get_dist_hwp2_3()		{ return dist_hwp2_3; }
+    AP_Float	get_dist_hwpl_2()		{ return dist_hwpl_2; }
+    AP_Float	get_dist_hwpl_3()		{ return dist_hwpl_3; }
 
     int16_t 	get_idx_last_mission_wp()	{ return idx_last_mission_wp; }
     int16_t 	get_idx_landing_wp()		{ return idx_landing_wp; }
@@ -100,8 +92,8 @@ public:
 
     // Set methods
     void 	set_dist_hwpl_1(AP_Float _val)	{ dist_hwpl_1 = _val; }
-    void 	set_dist_hwp1_2(AP_Float _val)	{ dist_hwp1_2 = _val; }
-    void 	set_dist_hwp2_3(AP_Float _val)	{ dist_hwp2_3 = _val; }
+    void 	set_dist_hwpl_2(AP_Float _val)	{ dist_hwpl_2 = _val; }
+    void 	set_dist_hwpl_3(AP_Float _val)	{ dist_hwpl_3 = _val; }
 
     AP_Mission::Mission_Command get_hwp1() { return hwp1; }
     AP_Mission::Mission_Command get_hwp2() { return hwp2; }
@@ -120,8 +112,8 @@ protected:
     AP_Float hwp_spd;
 
     AP_Float dist_hwpl_1;
-    AP_Float dist_hwp1_2;
-    AP_Float dist_hwp2_3;
+    AP_Float dist_hwpl_2;
+    AP_Float dist_hwpl_3;
 
 private:
 

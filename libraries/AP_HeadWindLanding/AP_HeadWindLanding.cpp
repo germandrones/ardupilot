@@ -71,13 +71,13 @@ void AP_HeadWindLanding::calc_index_landing_waypoint(void)
     // Start iterating from the end of the mission
     for(int16_t i=num_cmd-1; i>=0; i--)
     {
-	_mission.get_next_nav_cmd(i, current_cmd);
+		_mission.get_next_nav_cmd(i, current_cmd);
 
-	if(current_cmd.id == MAV_CMD_NAV_LAND)
-	{
-	    idx_landing_wp = current_cmd.index;
-	    break;
-	}
+		if(current_cmd.id == MAV_CMD_NAV_LAND)
+		{
+			idx_landing_wp = current_cmd.index;
+			break;
+		}
     }
 
     // If I ended the for loop and the return value is -1, it means that the current mission has no
@@ -98,13 +98,13 @@ void AP_HeadWindLanding::calc_index_last_mission_waypoint(void)
     // Start iterating from the end of the mission, looking for the n-th last DO_NAV waypoint.
     for(int16_t i=num_cmd-1; i>=0; i--)
     {
-	_mission.get_next_nav_cmd(i, current_cmd);
+		_mission.get_next_nav_cmd(i, current_cmd);
 
-	if(current_cmd.id == MAV_CMD_NAV_WAYPOINT)
-	{
-	    idx_last_mission_wp = current_cmd.index;
-	    break;
-	}
+		if(current_cmd.id == MAV_CMD_NAV_WAYPOINT)
+		{
+			idx_last_mission_wp = current_cmd.index;
+			break;
+		}
     }
 
     if(idx_last_mission_wp < 0)
@@ -128,32 +128,24 @@ void AP_HeadWindLanding::calc_index_hw_waypoints()
     // Start iterating from the end of the mission, looking for the n-th last DO_NAV waypoint.
     for(int16_t i=num_cmd-1; i>=0; i--)
     {
-	_mission.get_next_nav_cmd(i, current_cmd);
+		_mission.get_next_nav_cmd(i, current_cmd);
 
-	if(current_cmd.id == MAV_CMD_NAV_WAYPOINT)
-	    ++curr_num_nav_cmd_idx;
+		if(current_cmd.id == MAV_CMD_NAV_WAYPOINT)
+			++curr_num_nav_cmd_idx;
 
-	// When I reach the n-th DO_NAV command, I get out the loop
-	if(curr_num_nav_cmd_idx == (n+1))
-	{
-	    idx_hwp = current_cmd.index;
-	    break;
-	}
+		// When I reach the n-th DO_NAV command, I get out the loop
+		if(curr_num_nav_cmd_idx == (n+1))
+		{
+			idx_hwp = current_cmd.index;
+			break;
+		}
     }
 
     // If I ended the for loop and the return value is zero, it means that
     // the current mission has up to 2 mission waypoints. It's not common but
     // it can happen.
     if(idx_hwp == 0)
-	hwp_error = HWP_INDEX_NOT_FOUND;
-}
-
-bool AP_HeadWindLanding::is_change_speed_cmd_issued(const AP_Mission::Mission_Command& cmd)
-{
-    if(cmd.index > idx_last_mission_wp && cmd.index < idx_landing_wp && cmd.id == MAV_CMD_DO_CHANGE_SPEED)
-    	return true;
-
-    return false;
+    	hwp_error = HWP_INDEX_NOT_FOUND;
 }
 
 // This function generates the virtual waypoints to attach at the end of mission, right before the landing waypoint
@@ -167,19 +159,6 @@ void AP_HeadWindLanding::generate_hw_waypoints(const AP_Mission::Mission_Command
 
 	// If I reached the point, I attach the virtual waypoint to the end of the mission,
 	// just before the landing waypoint
-
-	// Retrieve information about the wind --------------------------------------------
-	// I assume that at this point of the mission I have a good estimation of wind
-	// speed and direction
-	Vector3f wind;
-
-	_ahrs.get_NavEKF2().getWind(0,wind);
-
-	float windX = wind.x;
-	float windY = wind.y;
-	float modWind = sqrt(wind.x*wind.x+wind.y*wind.y);
-	gcs().send_text(MAV_SEVERITY_NOTICE, "WIND_SPD:%5.2f",modWind);
-	// -------------------------------------------------------------------------------
 
 	// Retrieve the landing waypoint from the mission
 	AP_Mission::Mission_Command wp;
@@ -230,35 +209,27 @@ void AP_HeadWindLanding::generate_hw_waypoints(const AP_Mission::Mission_Command
 	float min_distance_last_phase = 100.0f;
 
 	dist_hwpl_1 = hwp_radius / 2.0f;
-	dist_hwp1_2 = hwp_radius / 4.0f;
-	dist_hwp2_3 = dist_hwp1_2;
+	dist_hwpl_2 = hwp_radius * (3.0f/4.0f);
+	dist_hwpl_3 = hwp_radius;
 
-	// Now I check the landing waypoint altitude. If the difference is greater than 20 meters, I set it to 20.
-	float max_altitude_difference = 20.0f;
+	// Retrieve information about the wind --------------------------------------------
+	// I assume that at this point of the mission I have a good estimation of wind
+	// speed and direction
+	Vector3f wind;
 
-	// Altitude difference is expressed in centimeters
-	float altitude_difference = last_mwp.content.location.alt - wp.content.location.alt;
+	_ahrs.get_NavEKF2().getWind(0,wind);
 
-	if(altitude_difference > 2000.0)
-	  wp.content.location.alt = last_mwp.content.location.alt - 2000.0;
-
-	if(altitude_difference < -2000.0)
-	  wp.content.location.alt = last_mwp.content.location.alt + 2000.0;
-
+	float modWind = sqrt(wind.x*wind.x+wind.y*wind.y);
+	gcs().send_text(MAV_SEVERITY_NOTICE, "WIND_SPD:%5.2f",modWind);
 	// -------------------------------------------------------------------------------
-
-	// GCS_SEND_MSG("LAST M_WP:%10.6f,%10.6f,%8.3f",last_mwp_lat,last_mwp_lng,last_mwp_alt);
 
 	// Default distance of VWP when there is no wind
 	// Direction of the Wind (rad)
 	float thetaWind = 0.0f;
 	float new_theta_hwp = 0.0f;
 
-	float dist_hwpl_2 = dist_hwp1_2 + dist_hwpl_1;
-	float dist_hwpl_3 = dist_hwp2_3 + dist_hwpl_2;
-
 	// WindX is the component of the wind along North Axis. WindY is the component of the wind along East Axis.
-	thetaWind = atan2(windY,windX);
+	thetaWind = atan2(wind.y,wind.x);
 	// New theta is the wind direction
 	new_theta_hwp = thetaWind + heading_wind*DEG_TO_RAD;
 	// GCS_SEND_MSG("WIND_DIR:%f",thetaWind*180.0f/3.1415f);
