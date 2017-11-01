@@ -348,6 +348,8 @@ public:
         k_param_mixing_offset,
         k_param_dspoiler_rud_rate,
 
+		k_param_headwind_wp = 250,
+
         k_param_DataFlash = 253, // Logging Group
 
         // 254,255: reserved

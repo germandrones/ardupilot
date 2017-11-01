@@ -1120,6 +1120,10 @@ const AP_Param::Info Plane::var_info[] = {
     // @Path: ../libraries/AP_Landing/AP_Landing.cpp
     GOBJECT(landing, "LAND_", AP_Landing),
 
+    // @Group: HWP_
+    // @Path: ../libraries/AP_HeadWindLanding/AP_HeadWindLanding.cpp
+    GOBJECT(headwind_wp, "HWP_", AP_HeadWindLanding),
+
     AP_VAREND
 };
 

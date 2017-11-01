@@ -113,6 +113,8 @@
 
 #include <AP_InertialNav/AP_InertialNav.h>
 
+#include <AP_HeadWindLanding/AP_HeadWindLanding.h>
+
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
 #include <SITL/SITL.h>
 #endif
@@ -800,6 +802,8 @@ private:
 
     static const struct LogStructure log_structure[];
     
+    AP_HeadWindLanding headwind_wp{mission,ahrs};
+
 #if CONFIG_HAL_BOARD == HAL_BOARD_PX4
     // the crc of the last created PX4Mixer
     int32_t last_mixer_crc = -1;
