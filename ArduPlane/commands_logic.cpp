@@ -36,13 +36,16 @@ bool Plane::start_command(const AP_Mission::Mission_Command& cmd)
 
         AP_Mission::Mission_Command next_nav_cmd;
         const uint16_t next_index = mission.get_current_nav_index() + 1;
-        auto_state.wp_is_land_approach = mission.get_next_nav_cmd(next_index, next_nav_cmd) && (next_nav_cmd.id == MAV_CMD_NAV_LAND);
+
+        // We just started the mission, therefore wp_is_land_approach is forced to false.
+        auto_state.wp_is_land_approach = false; // mission.get_next_nav_cmd(next_index, next_nav_cmd) && (next_nav_cmd.id == MAV_CMD_NAV_LAND);
 
 		//mission.get_next_nav_cmd(next_index, next_nav_cmd);
         set_next_WP(next_nav_cmd.content.location);
 		mission.set_current_cmd(next_index);
 		gcs().send_text(MAV_SEVERITY_NOTICE, "Detected transition");
 		gcs().send_text(MAV_SEVERITY_NOTICE, "Mission set to the first nav waypoint");
+
 	}
 
     if (AP_Mission::is_nav_cmd(cmd) && cmd.id != MAV_CMD_NAV_TAKEOFF) {
