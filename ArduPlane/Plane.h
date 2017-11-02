@@ -858,6 +858,7 @@ private:
     void Log_Write_Vehicle_Startup_Messages();
     void Log_Write_AOA_SSA();
     void Log_Write_AETR();
+    void Log_Write_HWP(int _mid, float _lat, float _lon, float _alt, int _ishwp);
 
     void load_parameters(void);
     void convert_mixers(void);

@@ -453,16 +453,15 @@ void Plane::do_nav_wp(const AP_Mission::Mission_Command& cmd)
     float cmd_alt = cmd.content.location.alt/100.0f;
     int16_t cmd_idx = cmd.index;
 
-    // if(virtual_wp.is_current_cmd_vwp(cmd))
-    if(cmd.index > headwind_wp.get_idx_last_mission_wp() && cmd.id == MAV_CMD_NAV_WAYPOINT)
+    if(cmd.index > headwind_wp.get_idx_last_mission_wp() && cmd.id != MAV_CMD_NAV_LAND)
     {
     	gcs().send_text(MAV_SEVERITY_INFO,"HWP(%d),%d,%10.6f,%10.6f,%8.3f",cmd_idx,cmd_idx,cmd_lat,cmd_lng,cmd_alt);
-    	// Log_Write_HWP(cmd_idx,cmd_lat,cmd_lng,cmd_alt,1);
+    	Log_Write_HWP(cmd_idx,cmd_lat,cmd_lng,cmd_alt,1);
     }
     else
     {
     	gcs().send_text(MAV_SEVERITY_INFO,"WP(%d),%d,%10.6f,%10.6f,%8.3f",cmd_idx,cmd_idx,cmd_lat,cmd_lng,cmd_alt);
-    	// Log_Write_HWP(cmd_idx,cmd_lat,cmd_lng,cmd_alt,0);
+    	Log_Write_HWP(cmd_idx,cmd_lat,cmd_lng,cmd_alt,0);
     }
     // ========================================================================================
 

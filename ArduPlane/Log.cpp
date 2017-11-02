@@ -367,6 +367,31 @@ void Plane::Log_Write_Home_And_Origin()
     }
 }
 
+// Logging of HeadWind waypoints
+struct PACKED log_HWP {
+    LOG_PACKET_HEADER;
+    uint64_t time_us;
+    int      mid;
+    float    lat;
+    float    lon;
+    float    alt;
+    int      ishwp;
+};
+
+void Plane::Log_Write_HWP(int _mid, float _lat, float _lon, float _alt, int _ishwp)
+{
+    struct log_HWP pkt = {
+        LOG_PACKET_HEADER_INIT(LOG_HWP_MSG),
+        time_us	: AP_HAL::micros64(),
+        mid		: _mid,
+		lat     : _lat,
+		lon     : _lon,
+		alt     : _alt,
+		ishwp   : _ishwp
+    };
+    DataFlash.WriteBlock(&pkt, sizeof(pkt));
+}
+
 const struct LogStructure Plane::log_structure[] = {
     LOG_COMMON_STRUCTURES,
     { LOG_PERFORMANCE_MSG, sizeof(log_Performance), 
@@ -389,6 +414,7 @@ const struct LogStructure Plane::log_structure[] = {
       "QTUN", "Qffffhhfffff", "TimeUS,AngBst,ThrOut,DAlt,Alt,DCRt,CRt,DVx,DVy,DAx,DAy,TMix" },
     { LOG_AOA_SSA_MSG, sizeof(log_AOA_SSA),
       "AOA", "Qff", "TimeUS,AOA,SSA" },
+	{ LOG_HWP_MSG, sizeof(log_HWP), "HWP", "Qifffi", "TimeUS,idWP,lat,lon,alt,isHWP"},
 #if OPTFLOW == ENABLED
     { LOG_OPTFLOW_MSG, sizeof(log_Optflow),
       "OF",   "QBffff",   "TimeUS,Qual,flowX,flowY,bodyX,bodyY" },
