@@ -1110,6 +1110,7 @@ void Plane::update_flight_stage(void)
                     gcs().send_text(MAV_SEVERITY_INFO,"Landing aborted via throttle");
                     set_flight_stage(AP_Vehicle::FixedWing::FLIGHT_ABORT_LAND);
                 } else {
+                	gcs().send_text(MAV_SEVERITY_INFO,"LANDING PROCEDURE STARTED");
                     set_flight_stage(AP_Vehicle::FixedWing::FLIGHT_LAND);
                 }
             } else if (quadplane.in_assisted_flight()) {

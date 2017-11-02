@@ -5,6 +5,7 @@
 /********************************************************************************/
 
 bool message_visualized = false;
+bool message_landing_phase_visualized = false;
 
 bool Plane::start_command(const AP_Mission::Mission_Command& cmd)
 {
@@ -455,6 +456,11 @@ void Plane::do_nav_wp(const AP_Mission::Mission_Command& cmd)
 
     if(cmd.index > headwind_wp.get_idx_last_mission_wp() && cmd.id != MAV_CMD_NAV_LAND)
     {
+    	if(!message_landing_phase_visualized)
+    	{
+    		gcs().send_text(MAV_SEVERITY_INFO,"STARTING LANDING PHASE");
+    		message_landing_phase_visualized = true;
+    	}
     	gcs().send_text(MAV_SEVERITY_INFO,"HWP(%d),%d,%10.6f,%10.6f,%8.3f",cmd_idx,cmd_idx,cmd_lat,cmd_lng,cmd_alt);
     	Log_Write_HWP(cmd_idx,cmd_lat,cmd_lng,cmd_alt,1);
     }
