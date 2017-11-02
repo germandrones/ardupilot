@@ -24,10 +24,15 @@
 
 #define SCHED_TASK(func, rate_hz, max_time_micros) SCHED_TASK_CLASS(Plane, &plane, func, rate_hz, max_time_micros)
 
-int one_sec_cnt = 0;
-int _flag_cnt = 0;
-bool mission_rewrote = false;
-bool mission_restored = false;
+#ifdef HW_TEST
+
+	int one_sec_cnt = 0;
+	int _flag_cnt = 0;
+	bool mission_rewrote = false;
+	bool mission_restored = false;
+
+#endif
+
 bool hwp_status_printed = false;
 
 /*
@@ -333,6 +338,8 @@ void Plane::one_second_loop()
 			hwp_status_printed = true;
 	}
 
+#ifdef HW_TEST
+
 	if(headwind_wp.is_hwp_enabled())
 	{
 		one_sec_cnt += 1;
@@ -353,6 +360,8 @@ void Plane::one_second_loop()
 			mission_restored = true;
 		}
     }
+
+#endif
 
     // send a heartbeat
     gcs().send_message(MSG_HEARTBEAT);
@@ -407,6 +416,8 @@ void Plane::one_second_loop()
     update_sensor_status_flags();
 }
 
+#ifdef HW_TEST
+
 void Plane::one_time_rewrite()
 {
     // ========================================================================================
@@ -457,6 +468,8 @@ void Plane::one_time_restore()
     	gcs().send_text(MAV_SEVERITY_NOTICE, "Error while restoring original mission");
     // ========================================================================================
 }
+
+#endif
 
 void Plane::log_perf_info()
 {
