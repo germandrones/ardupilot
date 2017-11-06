@@ -21,12 +21,13 @@
 
 // List of states concerning the generation of the virtual waypoints
 typedef enum vwp_generation_states {
-	HWP_NOT_GENERATED = 0,
+	HWP_NOT_INITIALIZED = 0,
+	HWP_INITIALIZED,
 	HWP_GENERATED,
 	HWP_REMOVED
 } hwp_status_t;
 
-// List of the possible error during the generation of the virtual waypoints
+// List of the possible errors during the generation of the virtual waypoints
 typedef enum vwp_error_states {
 	HWP_NO_ERROR = 0,
 	HWP_LANDING_WP_NOT_FOUND,
@@ -76,29 +77,32 @@ public:
     void restore_mission();
 
     // Get methods
-    bool		is_hwp_enabled()		{ return hwp_enabled; }
-    AP_Float 	get_heading_wind()		{ return heading_wind; }
-    AP_Float 	get_hwp_spd()			{ return hwp_spd; }
+    bool		is_hwp_enabled()			{ return hwp_enabled; }
+    AP_Float 	get_heading_wind()			{ return heading_wind; }
+    AP_Float 	get_hwp_spd()				{ return hwp_spd; }
 
-    AP_Float	get_dist_hwpl_1()		{ return dist_hwpl_1; }
-    AP_Float	get_dist_hwpl_2()		{ return dist_hwpl_2; }
-    AP_Float	get_dist_hwpl_3()		{ return dist_hwpl_3; }
+    AP_Float	get_dist_hwpl_1()			{ return dist_hwpl_1; }
+    AP_Float	get_dist_hwpl_2()			{ return dist_hwpl_2; }
+    AP_Float	get_dist_hwpl_3()			{ return dist_hwpl_3; }
 
     int16_t 	get_idx_last_mission_wp()	{ return idx_last_mission_wp; }
     int16_t 	get_idx_landing_wp()		{ return idx_landing_wp; }
-    int16_t 	get_idx_hwp()			{ return idx_hwp; }
+    int16_t 	get_idx_hwp()				{ return idx_hwp; }
 
-    int16_t	get_num_commands()		{ return num_cmd; }
+    int16_t		get_num_commands()			{ return num_cmd; }
 
     // Set methods
     void 	set_dist_hwpl_1(AP_Float _val)	{ dist_hwpl_1 = _val; }
     void 	set_dist_hwpl_2(AP_Float _val)	{ dist_hwpl_2 = _val; }
     void 	set_dist_hwpl_3(AP_Float _val)	{ dist_hwpl_3 = _val; }
 
-    AP_Mission::Mission_Command get_hwp1() { return hwp1; }
-    AP_Mission::Mission_Command get_hwp2() { return hwp2; }
-    AP_Mission::Mission_Command get_hwp3() { return hwp3; }
+    AP_Mission::Mission_Command get_hwp1() 	{ return hwp1; }
+    AP_Mission::Mission_Command get_hwp2()	{ return hwp2; }
+    AP_Mission::Mission_Command get_hwp3() 	{ return hwp3; }
     // AP_Mission::Mission_Command get_reduce_speed() { return reduce_speed; }
+
+    void		enable()					{ hwp_enabled = 1; }
+    void		disable()					{ hwp_enabled = 0; }
 
     // Status variables
     hwp_status_t hwp_status;
@@ -116,6 +120,9 @@ protected:
     AP_Float dist_hwpl_3;
 
 private:
+
+    // Returns true if all the conditions for generating the HeadWind waypoints are met.
+    bool all_conditions_satisfied();
 
     typedef struct {
       // The following variable set the point in the mission where the virtual waypoints are generated.

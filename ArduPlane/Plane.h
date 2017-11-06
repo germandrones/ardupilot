@@ -860,6 +860,8 @@ private:
     void Log_Write_AETR();
     void Log_Write_HWP(int _mid, float _lat, float _lon, float _alt, int _ishwp);
 
+    void gcs_send_hwp_info(const AP_Mission::Mission_Command &cmd);
+
     void load_parameters(void);
     void convert_mixers(void);
     void adjust_altitude_target();

@@ -117,6 +117,8 @@ void Plane::setup()
 
     // initialise the main loop scheduler
     scheduler.init(&scheduler_tasks[0], ARRAY_SIZE(scheduler_tasks));
+
+
 }
 
 void Plane::loop()
@@ -657,13 +659,10 @@ void Plane::handle_auto_mode(void)
 
     if (quadplane.in_vtol_auto()) {
         quadplane.control_auto(next_WP_loc);
-    } else if (nav_cmd_id == MAV_CMD_NAV_TAKEOFF ||
-        (nav_cmd_id == MAV_CMD_NAV_LAND && flight_stage == AP_Vehicle::FixedWing::FLIGHT_ABORT_LAND)) {
-    	gcs().send_text(MAV_SEVERITY_NOTICE, "Auto-Takeoff/land wp");
+    } else if (nav_cmd_id == MAV_CMD_NAV_TAKEOFF || (nav_cmd_id == MAV_CMD_NAV_LAND && flight_stage == AP_Vehicle::FixedWing::FLIGHT_ABORT_LAND)) {
     	takeoff_calc_roll();
         takeoff_calc_pitch();
         calc_throttle();
-
     } else if (nav_cmd_id == MAV_CMD_NAV_LAND) {
         calc_nav_roll();
         calc_nav_pitch();
@@ -1110,7 +1109,7 @@ void Plane::update_flight_stage(void)
                     gcs().send_text(MAV_SEVERITY_INFO,"Landing aborted via throttle");
                     set_flight_stage(AP_Vehicle::FixedWing::FLIGHT_ABORT_LAND);
                 } else {
-                	gcs().send_text(MAV_SEVERITY_INFO,"LANDING PROCEDURE STARTED");
+                	// LANDING PROCEDURE STARTED
                     set_flight_stage(AP_Vehicle::FixedWing::FLIGHT_LAND);
                 }
             } else if (quadplane.in_assisted_flight()) {

@@ -17,7 +17,7 @@ const AP_Param::GroupInfo AP_HeadWindLanding::var_info[] = {
     // @Units: Boolean
     // @Range: 0 1
     // @Increment: 1
-    AP_GROUPINFO("ENABLED", 1, AP_HeadWindLanding, hwp_enabled, 1),
+    AP_GROUPINFO("ENABLED", 1, AP_HeadWindLanding, hwp_enabled, 0),
 
     // @Param: DIST_VWP1
     // @DisplayName: Radius of the extra waypoint area
@@ -33,8 +33,8 @@ const AP_Param::GroupInfo AP_HeadWindLanding::var_info[] = {
 };
 
 
-AP_HeadWindLanding::AP_HeadWindLanding(AP_Mission& mission, AP_AHRS_NavEKF &ahrs):
-	hwp_status(HWP_NOT_GENERATED),
+AP_HeadWindLanding::AP_HeadWindLanding(AP_Mission &mission, AP_AHRS_NavEKF &ahrs):
+	hwp_status(HWP_NOT_INITIALIZED),
 	hwp_error(HWP_NO_ERROR),
 	_mission(mission),
 	_ahrs(ahrs),
@@ -60,6 +60,8 @@ void AP_HeadWindLanding::init_HWP(void)
     hwp3 = {};
     // reduce_speed = {};
 
+    hwp_status = HWP_INITIALIZED;
+
 }
 
 void AP_HeadWindLanding::calc_index_landing_waypoint(void)
@@ -84,8 +86,8 @@ void AP_HeadWindLanding::calc_index_landing_waypoint(void)
     // landing waypoints.
     if(idx_landing_wp < 0)
     {
-	//GCS_SEND_MSG("Landing WP not found. VWP generation aborted.");
-	hwp_error = HWP_LANDING_WP_NOT_FOUND;
+		//GCS_SEND_MSG("Landing WP not found. VWP generation aborted.");
+		hwp_error = HWP_LANDING_WP_NOT_FOUND;
     }
 }
 
@@ -109,8 +111,8 @@ void AP_HeadWindLanding::calc_index_last_mission_waypoint(void)
 
     if(idx_last_mission_wp < 0)
     {
-	//GCS_SEND_MSG("Last Mission WP not found. VWP generation aborted.");
-	hwp_error = HWP_LAST_MISSION_WP_NOT_FOUND;
+		//GCS_SEND_MSG("Last Mission WP not found. VWP generation aborted.");
+		hwp_error = HWP_LAST_MISSION_WP_NOT_FOUND;
     }
 }
 
@@ -148,196 +150,149 @@ void AP_HeadWindLanding::calc_index_hw_waypoints()
     	hwp_error = HWP_INDEX_NOT_FOUND;
 }
 
+bool AP_HeadWindLanding::all_conditions_satisfied()
+{
+	return (is_hwp_enabled() && hwp_status == HWP_INITIALIZED && hwp_error == HWP_NO_ERROR);
+}
+
 // This function generates the virtual waypoints to attach at the end of mission, right before the landing waypoint
 void AP_HeadWindLanding::generate_hw_waypoints(const AP_Mission::Mission_Command& cmd)
 {
 
     // Check if the current cmd is where I should generate the virtual waypoints and there are no errors
-    if(cmd.index == idx_hwp && hwp_error == HWP_NO_ERROR)
+    if(cmd.index == idx_hwp && all_conditions_satisfied())
     {
-	//GCS_SEND_MSG("Generating VWP: %d",cmd.index);
+		//GCS_SEND_MSG("Generating VWP: %d",cmd.index);
 
-	// If I reached the point, I attach the virtual waypoint to the end of the mission,
-	// just before the landing waypoint
+		// If I reached the point, I attach the virtual waypoint to the end of the mission,
+		// just before the landing waypoint
 
-	// Retrieve the landing waypoint from the mission
-	AP_Mission::Mission_Command wp;
-	// The index of the mission starts from 0.
-	_mission.get_next_nav_cmd(idx_landing_wp, wp);
+		// Retrieve the landing waypoint from the mission
+		AP_Mission::Mission_Command wp;
+		// The index of the mission starts from 0.
+		_mission.get_next_nav_cmd(idx_landing_wp, wp);
 
-	// Conversion of latitude and longitude from degrees to meters -------------------
-	// (The reference WP for the conversion is the landing WP)
-	// More information at: https://knowledge.safe.com/articles/725/calculating-accurate-length-in-meters-for-lat-long.html
-	float lat = wp.content.location.lat*TO_DEG_FORMAT;
-	float lng = wp.content.location.lng*TO_DEG_FORMAT;
+		// Conversion of latitude and longitude from degrees to meters -------------------
+		// (The reference WP for the conversion is the landing WP)
+		// More information at: https://knowledge.safe.com/articles/725/calculating-accurate-length-in-meters-for-lat-long.html
+		float lat = wp.content.location.lat*TO_DEG_FORMAT;
+		float lng = wp.content.location.lng*TO_DEG_FORMAT;
 
-	float mdlat = METERS_PER_DEG_LAT(lat);
-	float mdlng = METERS_PER_DEG_LNG(lat);
+		float mdlat = METERS_PER_DEG_LAT(lat);
+		float mdlng = METERS_PER_DEG_LNG(lat);
 
-	// GCS_SEND_MSG("LLr:%12.4f,%12.4f",lat,lng);
-	// GCS_SEND_MSG("LLm:%12.4f,%12.4f",mdlat,mdlng);
+		// Coordinates of the virtual waypoints
+		Location loc_hwp1, loc_hwp2, loc_hwp3;
+		Location land_wp = wp.content.location;
 
-	// Coordinates of the virtual waypoints
-	Location loc_hwp1, loc_hwp2, loc_hwp3;
-	Location land_wp = wp.content.location;
+		// Retrieve the last mission waypoint from the mission
+		AP_Mission::Mission_Command last_mwp;
+		_mission.get_next_nav_cmd(idx_last_mission_wp, last_mwp);
 
-	// Retrieve the last mission waypoint from the mission
-	AP_Mission::Mission_Command last_mwp;
-	_mission.get_next_nav_cmd(idx_last_mission_wp, last_mwp);
+		// -------------------------------------------------------------------------------
+		// The following check prevents to have more than 15 degrees of drop between the
+		// last mission waypoint and the landing waypoint. The purpose is to have low speed
+		// after the transition and avoid the high pitch.
 
-	float last_mwp_lat = last_mwp.content.location.lat*TO_DEG_FORMAT;
-	float last_mwp_lng = last_mwp.content.location.lng*TO_DEG_FORMAT;
-	float last_mwp_alt = last_mwp.content.location.alt/100.0f;
+		// Minimum distance between the landing waypoint and the last mission waypoint
 
-	float land_wp_lat = land_wp.lat*TO_DEG_FORMAT;
-	float land_wp_lng = land_wp.lng*TO_DEG_FORMAT;
-	float land_wp_alt = land_wp.alt/100.0;
+		// sin(max_slope_deg*DEG_TO_RAD) cannot be zero since it is set as a constant value for the moment
+		// minimum distance is set as max_altitude_drop * cotg(max_slope_angle).
+		// In this case, we have 20*cotg(7degrees) = 20*8.1443 = 162.886.
+		// This value has to be divided by 3, since we have 3 virtual waypoints.
+		// Therefore minimum_distance is 54.29 --> 55 meters.
 
-	// -------------------------------------------------------------------------------
-	// The following check prevents to have more than 15 degrees of drop between the
-	// last mission waypoint and the landing waypoint. The purpose is to have low speed
-	// after the transition and avoid the high pitch.
+		dist_hwpl_1 = hwp_radius / 2.0f;
+		dist_hwpl_2 = hwp_radius * (3.0f/4.0f);
+		dist_hwpl_3 = hwp_radius;
 
-	// Minimum distance between the landing waypoint and the last mission waypoint
+		// Retrieve information about the wind --------------------------------------------
+		// I assume that at this point of the mission I have a good estimation of wind
+		// speed and direction
+		Vector3f wind;
 
-	// sin(max_slope_deg*DEG_TO_RAD) cannot be zero since it is set as a constant value for the moment
-	// minimum distance is set as max_altitude_drop * cotg(max_slope_angle).
-	// In this case, we have 20*cotg(7degrees) = 20*8.1443 = 162.886.
-	// This value has to be divided by 3, since we have 3 virtual waypoints.
-	// Therefore minimum_distance is 54.29 --> 55 meters.
+		_ahrs.get_NavEKF2().getWind(0,wind);
 
-	float min_distance_last_phase = 100.0f;
+		float modWind = sqrt(wind.x*wind.x+wind.y*wind.y);
+		gcs().send_text(MAV_SEVERITY_NOTICE, "WIND_SPD:%f",modWind);
+		// -------------------------------------------------------------------------------
 
-	dist_hwpl_1 = hwp_radius / 2.0f;
-	dist_hwpl_2 = hwp_radius * (3.0f/4.0f);
-	dist_hwpl_3 = hwp_radius;
+		// Default distance of VWP when there is no wind
+		// Direction of the Wind (rad)
+		float thetaWind = 0.0f;
+		float new_theta_hwp = 0.0f;
 
-	// Retrieve information about the wind --------------------------------------------
-	// I assume that at this point of the mission I have a good estimation of wind
-	// speed and direction
-	Vector3f wind;
+		// WindX is the component of the wind along North Axis. WindY is the component of the wind along East Axis.
+		thetaWind = atan2(wind.y,wind.x);
+		// New theta is the wind direction
+		new_theta_hwp = thetaWind + heading_wind*DEG_TO_RAD;
+		// GCS_SEND_MSG("WIND_DIR:%f",thetaWind*180.0f/3.1415f);
 
-	_ahrs.get_NavEKF2().getWind(0,wind);
+		// Calculate the coordinates of the first virtual waypoint -----------------------
+		loc_hwp1.lat = land_wp.lat + dist_hwpl_1*cos(new_theta_hwp) / mdlat * 10000000.0f;
+		loc_hwp1.lng = land_wp.lng + dist_hwpl_1*sin(new_theta_hwp) / mdlng * 10000000.0f;
+		// The altitude is the same as the altitude of the last waypoint mission
+		loc_hwp1.alt = land_wp.alt;
+		loc_hwp1.options = 1<<0; // Relative altitude
 
-	float modWind = sqrt(wind.x*wind.x+wind.y*wind.y);
-	gcs().send_text(MAV_SEVERITY_NOTICE, "WIND_SPD:%f",modWind);
-	// -------------------------------------------------------------------------------
+		// Calculate the coordinates of the second virtual waypoint ----------------------
+		loc_hwp2.lat = land_wp.lat + dist_hwpl_2*cos(new_theta_hwp) / mdlat * 10000000.0f;
+		loc_hwp2.lng = land_wp.lng + dist_hwpl_2*sin(new_theta_hwp) / mdlng * 10000000.0f;
+		// The altitude is the same as the altitude of the last waypoint mission
+		loc_hwp2.alt = land_wp.alt;
+		loc_hwp2.options = 1<<0;
 
-	// Default distance of VWP when there is no wind
-	// Direction of the Wind (rad)
-	float thetaWind = 0.0f;
-	float new_theta_hwp = 0.0f;
+		// AP_Mission::Change_Speed_Command vwp2_spd;
+		// vwp2_spd.speed_type = 0;
+		// The target speed is set as 80% of the current speed
+		// float current_speed = ahrs.getLastGNDSpeed();
+		float reduced_speed = hwp_spd; //current_speed*80.0f/100.0f;
 
-	// WindX is the component of the wind along North Axis. WindY is the component of the wind along East Axis.
-	thetaWind = atan2(wind.y,wind.x);
-	// New theta is the wind direction
-	new_theta_hwp = thetaWind + heading_wind*DEG_TO_RAD;
-	// GCS_SEND_MSG("WIND_DIR:%f",thetaWind*180.0f/3.1415f);
+		// Calculate the coordinates of the third virtual waypoint -----------------------
+		loc_hwp3.lat = land_wp.lat + dist_hwpl_3*cos(new_theta_hwp) / mdlat * 10000000.0f;
+		loc_hwp3.lng = land_wp.lng + dist_hwpl_3*sin(new_theta_hwp) / mdlng * 10000000.0f;
+		// The altitude is the same as the altitude of the last waypoint mission
+		loc_hwp3.alt = land_wp.alt;
+		loc_hwp3.flags.relative_alt = 1;
+		loc_hwp3.flags.loiter_xtrack = 1;
 
-	// Calculate the coordinates of the first virtual waypoint -----------------------
-	loc_hwp1.lat = land_wp.lat + dist_hwpl_1*cos(new_theta_hwp) / mdlat * 10000000.0f;
-	loc_hwp1.lng = land_wp.lng + dist_hwpl_1*sin(new_theta_hwp) / mdlng * 10000000.0f;
-	// The altitude is the same as the altitude of the last waypoint mission
-	loc_hwp1.alt = land_wp.alt;
-	loc_hwp1.options = 1<<0; // Relative altitude
+		// Adding the extra-commands (they will have the parameter p1 set to AUTOGENERATED_ITEM)
 
-	// Print and save info about vwp1
-	// float hwp1_lat = loc_hwp1.lat*TO_DEG_FORMAT;
-	// float hwp1_lng = loc_hwp1.lng*TO_DEG_FORMAT;
-	// float hwp1_alt = loc_hwp1.alt/100.0f;
-	// GCS_SEND_MSG("VWP1:%10.6f,%10.6f,%8.3f",vwp1_lat,vwp1_lng,vwp1_alt);
-	// -------------------------------------------------------------------------------
+		// Copy all the properties of the last mission waypoint
+		hwp3 = last_mwp;
+		// Overwrite command id and waypoint coordinates
+		hwp3.id = MAV_CMD_NAV_LOITER_TO_ALT;
+		hwp3.content.location = loc_hwp3;
+		hwp3.p1 = 30;
 
-	// Calculate the coordinates of the second virtual waypoint ----------------------
-	loc_hwp2.lat = land_wp.lat + dist_hwpl_2*cos(new_theta_hwp) / mdlat * 10000000.0f;
-	loc_hwp2.lng = land_wp.lng + dist_hwpl_2*sin(new_theta_hwp) / mdlng * 10000000.0f;
-	// The altitude is the same as the altitude of the last waypoint mission
-	loc_hwp2.alt = land_wp.alt;
-	loc_hwp2.options = 1<<0;
+		// Add the new command to the mission
 
-	// Print and save info about vwp2
-	// float hwp2_lat = loc_hwp2.lat*TO_DEG_FORMAT;
-	// float hwp2_lng = loc_hwp2.lng*TO_DEG_FORMAT;
-	// float hwp2_alt = loc_hwp2.alt/100.0f;
-	// GCS_SEND_MSG("VWP2:%10.6f,%10.6f,%8.3f",vwp2_lat,vwp2_lng,vwp2_alt);
+		hwp2 = last_mwp;
+		hwp2.id = MAV_CMD_NAV_WAYPOINT;
+		hwp2.content.location = loc_hwp2;
 
-	// AP_Mission::Change_Speed_Command vwp2_spd;
-	// vwp2_spd.speed_type = 0;
-	// The target speed is set as 80% of the current speed
-	// float current_speed = ahrs.getLastGNDSpeed();
-	float reduced_speed = hwp_spd; //current_speed*80.0f/100.0f;
+		// AP_Mission::Mission_Command reduce_speed = {};
+		// reduce_speed.id = MAV_CMD_DO_CHANGE_SPEED;
+		// reduce_speed.content.speed = vwp2_spd;
 
-	//if(reduced_speed < MINIMUM_SPEED_DURING_VWP)
-	// reduced_speed = MINIMUM_SPEED_DURING_VWP;
-	//vwp2_spd.target_ms = reduced_speed;
+		hwp1 = last_mwp;
+		hwp1.id = MAV_CMD_NAV_WAYPOINT;
+		hwp1.content.location = loc_hwp1;
 
-	// -------------------------------------------------------------------------------
+		if(hwp_enabled)
+		{
+			_mission.truncate(idx_landing_wp);
+			_mission.add_cmd(hwp3);
+			_mission.add_cmd(hwp2);
+			// _mission.add_cmd(reduce_speed);
+			_mission.add_cmd(hwp1);
+			// For the moment the UAV will still land at the original landing waypoint
+			_mission.add_cmd(wp);
+		}
 
-	// Calculate the coordinates of the third virtual waypoint -----------------------
-	loc_hwp3.lat = land_wp.lat + dist_hwpl_3*cos(new_theta_hwp) / mdlat * 10000000.0f;
-	loc_hwp3.lng = land_wp.lng + dist_hwpl_3*sin(new_theta_hwp) / mdlng * 10000000.0f;
-	// The altitude is the same as the altitude of the last waypoint mission
-	loc_hwp3.alt = land_wp.alt;
-	loc_hwp3.flags.relative_alt = 1;
-	loc_hwp3.flags.loiter_xtrack = 1;
+		hwp_status = HWP_GENERATED;
 
-	// float hwp3_lat = loc_hwp3.lat*TO_DEG_FORMAT;
-	// float hwp3_lng = loc_hwp3.lng*TO_DEG_FORMAT;
-	// float hwp3_alt = loc_hwp3.alt/100.0f;
-	// GCS_SEND_MSG("VWP3:%10.6f,%10.6f,%8.3f",vwp3_lat,vwp3_lng,vwp3_alt);
-	// -------------------------------------------------------------------------------
-
-	// The last virtual waypoint and the landinig waypoint should have the same altitude.
-
-	// Update the mission
-	// GCS_SEND_MSG("REWRITE_M");
-
-	// Remove the old landing waypoint
-	// GCS_SEND_MSG("OLD L_WP IDX:%d",wp.index);
-	// GCS_SEND_MSG("Before truncate:%d",mission.num_commands());
-
-	// GCS_SEND_MSG("After truncate:%d",mission.num_commands());
-
-	// Adding the extra-commands (they will have the parameter p1 set to AUTOGENERATED_ITEM)
-
-	// AP_Mission::Mission_Command vwp3 = {};
-	// Copy all the properties of the last mission waypoint
-	hwp3 = last_mwp;
-	// Overwrite command id and waypoint coordinates
-	hwp3.id = MAV_CMD_NAV_LOITER_TO_ALT;
-	hwp3.content.location = loc_hwp3;
-	hwp3.p1 = 30;
-
-	// Add the new command to the mission
-
-	// AP_Mission::Mission_Command vwp2 = {};
-	hwp2 = last_mwp;
-	hwp2.id = MAV_CMD_NAV_WAYPOINT;
-	hwp2.content.location = loc_hwp2;
-
-	// AP_Mission::Mission_Command reduce_speed = {};
-	// reduce_speed.id = MAV_CMD_DO_CHANGE_SPEED;
-	// reduce_speed.content.speed = vwp2_spd;
-
-	// AP_Mission::Mission_Command vwp1 = {};
-	hwp1 = last_mwp;
-	hwp1.id = MAV_CMD_NAV_WAYPOINT;
-	hwp1.content.location = loc_hwp1;
-
-	if(hwp_enabled)
-	{
-	    _mission.truncate(idx_landing_wp);
-	    _mission.add_cmd(hwp3);
-	    _mission.add_cmd(hwp2);
-	    // _mission.add_cmd(reduce_speed);
-	    _mission.add_cmd(hwp1);
-	    // For the moment the UAV will still land at the original landing waypoint
-	    _mission.add_cmd(wp);
-	}
-
-	hwp_status = HWP_GENERATED;
-
-	update_num_commands();
+		update_num_commands();
 
     }
 
@@ -346,7 +301,7 @@ void AP_HeadWindLanding::generate_hw_waypoints(const AP_Mission::Mission_Command
 void AP_HeadWindLanding::update_num_commands()
 {
     // num_cmd is updated with the total number of commands after adding the virtual waypoints
-    if(hwp_status > HWP_NOT_GENERATED)
+    if(hwp_status > HWP_INITIALIZED)
 	num_cmd = _mission.num_commands();
 }
 
@@ -355,35 +310,25 @@ void AP_HeadWindLanding::restore_mission()
     // If I generate the virtual waypoints, I can remove them and restore the mission to its original state.
     if(hwp_enabled && hwp_status == HWP_GENERATED)
     {
-	// Here I restore the original version of the mission (in case it should be reloaded)
-	// GCS_SEND_MSG("Restoring original mission");
-	AP_Mission::Mission_Command wp;
+		// Here I restore the original version of the mission (in case it should be reloaded)
+		AP_Mission::Mission_Command wp;
 
-	// GCS_SEND_MSG("Number of commands: %d",num_commands);
-	// The variable wp will contain the landinig waypoint that I need to restore
-	_mission.get_next_nav_cmd(num_cmd-1, wp);
+		// The variable wp will contain the landinig waypoint that I need to restore
+		_mission.get_next_nav_cmd(num_cmd-1, wp);
 
-	// uint16_t landing_wp_index = wp.index;
-	// GCS_SEND_MSG("Landing WP index: %d",landing_wp_index);
+		// If the last command is the landing (safety check)
+		if(wp.id==MAV_CMD_NAV_LAND)
+		{
+			// I remove the mission items starting from the index of the original landing waypoint
+			_mission.truncate(idx_landing_wp);
+			// I add the current waypoint (landing waypoint) as the last item
+			_mission.add_cmd(wp);
+		}
 
-	// If the last command is the landing (safety check)
-	if(wp.id==MAV_CMD_NAV_LAND)
-	{
-	    // I remove the mission items starting from the index of the original landing waypoint
-	    // GCS_SEND_MSG("Truncate mission at index: %d",idx_landing_wp);
-	    // GCS_SEND_MSG("Number of commands before truncate: %d",mission.num_commands());
-	    _mission.truncate(idx_landing_wp);
-	    // GCS_SEND_MSG("Number of commands after truncate: %d",mission.num_commands());
-	    // GCS_SEND_MSG("Re-adding landing WP");
-	    _mission.add_cmd(wp);
-	    // GCS_SEND_MSG("Number of commands after re-adding landing WP: %d",mission.num_commands());
-	}
+		// Change the status
+		hwp_status = HWP_REMOVED;
 
-	// Change the status
-	hwp_status = HWP_REMOVED;
-
-	update_num_commands();
-
+		update_num_commands();
     }
 }
 

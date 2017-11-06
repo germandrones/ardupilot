@@ -5,7 +5,6 @@
 /********************************************************************************/
 
 bool message_visualized = false;
-bool message_landing_phase_visualized = false;
 
 bool Plane::start_command(const AP_Mission::Mission_Command& cmd)
 {
@@ -17,11 +16,10 @@ bool Plane::start_command(const AP_Mission::Mission_Command& cmd)
         DataFlash.Log_Write_Mission_Cmd(mission, cmd);
     }
 
-    // special handling for nav vs non-nav commands
-
 	// If we are in auto mode, the arms are tilted and the current waypoint is takeoff, I move the mission forward by one item.
 	if(cmd.id == MAV_CMD_NAV_TAKEOFF && tilt_to_fwd)
 	{
+		gcs().send_text(MAV_SEVERITY_NOTICE, "Detected transition");
 
         // set land_complete to false to stop us zeroing the throttle
         auto_state.sink_rate = 0;
@@ -47,25 +45,7 @@ bool Plane::start_command(const AP_Mission::Mission_Command& cmd)
 		//mission.get_next_nav_cmd(next_index, next_nav_cmd);
         set_next_WP(next_nav_cmd.content.location);
 		mission.set_current_cmd(next_index);
-		gcs().send_text(MAV_SEVERITY_NOTICE, "Detected transition");
 		gcs().send_text(MAV_SEVERITY_NOTICE, "Mission set to the first nav waypoint");
-
-	    // ========================================================================================
-	    // Initialize the virtual waypoint procedure when I detect the takeoff waypoint
-		headwind_wp.init_HWP();
-
-		gcs().send_text(MAV_SEVERITY_INFO, "Num commands: %d",headwind_wp.get_num_commands());
-		gcs().send_text(MAV_SEVERITY_INFO, "Idx Land WP: %d",headwind_wp.get_idx_landing_wp());
-		gcs().send_text(MAV_SEVERITY_INFO, "Idx Last MWP: %d",headwind_wp.get_idx_last_mission_wp());
-		gcs().send_text(MAV_SEVERITY_INFO, "Idx VWP: %d",headwind_wp.get_idx_hwp());
-
-	    // Currently, if the index calculation fails, we do nothing.
-	    // We could think about aborting the mission in some particular circumstances.
-	    if(headwind_wp.hwp_error == HWP_NO_ERROR)
-	    	gcs().send_text(MAV_SEVERITY_INFO, "Index calculated correctly.");
-	    else
-	    	gcs().send_text(MAV_SEVERITY_INFO, "Error during index generation: %d",headwind_wp.hwp_error);
-	    // ========================================================================================
 
 	}
 
@@ -93,6 +73,9 @@ bool Plane::start_command(const AP_Mission::Mission_Command& cmd)
     } else {
         gcs().send_text(MAV_SEVERITY_INFO, "Executing command ID #%i, %i ",cmd.id, cmd.index);
     }
+
+    // ========================================================================================
+    // Initialization of the heading waypoint procedure
 
     switch(cmd.id) {
 
@@ -427,6 +410,33 @@ void Plane::do_takeoff(const AP_Mission::Mission_Command& cmd)
     steer_state.locked_course_err = 0;
     steer_state.hold_course_cd = -1;
     auto_state.baro_takeoff_alt = barometer.get_altitude();
+
+}
+
+// Show HWP info on the Ground control station and log information on the SD card
+void Plane::gcs_send_hwp_info(const AP_Mission::Mission_Command& cmd)
+{
+
+    float cmd_lat = cmd.content.location.lat*TO_DEG_FORMAT;
+    float cmd_lng = cmd.content.location.lng*TO_DEG_FORMAT;
+    float cmd_alt = cmd.content.location.alt/100.0f;
+    int16_t cmd_idx = cmd.index;
+
+    if(cmd.index > headwind_wp.get_idx_last_mission_wp() && cmd.id != MAV_CMD_NAV_LAND)
+    {
+    	gcs().send_text(MAV_SEVERITY_INFO,"HWP(%d),%d,%10.6f,%10.6f,%8.3f",cmd_idx,cmd_idx,cmd_lat,cmd_lng,cmd_alt);
+    	Log_Write_HWP(cmd_idx,cmd_lat,cmd_lng,cmd_alt,1);
+    }
+    else if(cmd.id == MAV_CMD_NAV_LAND)
+    {
+        gcs().send_text(MAV_SEVERITY_NOTICE, "LWP(%d),%d,%10.6f,%10.6f,%8.3f",cmd_idx,cmd_idx,cmd_lat,cmd_lng,cmd_alt);
+    }
+    else
+    {
+    	gcs().send_text(MAV_SEVERITY_INFO,"WP(%d),%d,%10.6f,%10.6f,%8.3f",cmd_idx,cmd_idx,cmd_lat,cmd_lng,cmd_alt);
+    	Log_Write_HWP(cmd_idx,cmd_lat,cmd_lng,cmd_alt,0);
+    }
+
 }
 
 void Plane::do_nav_wp(const AP_Mission::Mission_Command& cmd)
@@ -441,36 +451,12 @@ void Plane::do_nav_wp(const AP_Mission::Mission_Command& cmd)
     {
     	gcs().send_text(MAV_SEVERITY_INFO,"HeadWind WP generated");
     	gcs().send_text(MAV_SEVERITY_INFO,"Num commands: %d",headwind_wp.get_num_commands());
-    	gcs().send_text(MAV_SEVERITY_INFO,"IDX LMWP: %F",headwind_wp.get_idx_last_mission_wp());
+    	gcs().send_text(MAV_SEVERITY_INFO,"IDX LMWP: %d",headwind_wp.get_idx_last_mission_wp());
 
 		message_visualized = true;
     }
 
-    // -----------------------------------------------------------------------
-    // Log information on the SD card
-
-    float cmd_lat = cmd.content.location.lat*TO_DEG_FORMAT;
-    float cmd_lng = cmd.content.location.lng*TO_DEG_FORMAT;
-    float cmd_alt = cmd.content.location.alt/100.0f;
-    int16_t cmd_idx = cmd.index;
-
-    if(cmd.index > headwind_wp.get_idx_last_mission_wp() && cmd.id != MAV_CMD_NAV_LAND)
-    {
-    	if(!message_landing_phase_visualized)
-    	{
-    		gcs().send_text(MAV_SEVERITY_INFO,"STARTING LANDING PHASE");
-    		message_landing_phase_visualized = true;
-    	}
-    	gcs().send_text(MAV_SEVERITY_INFO,"HWP(%d),%d,%10.6f,%10.6f,%8.3f",cmd_idx,cmd_idx,cmd_lat,cmd_lng,cmd_alt);
-    	Log_Write_HWP(cmd_idx,cmd_lat,cmd_lng,cmd_alt,1);
-    }
-    else
-    {
-    	gcs().send_text(MAV_SEVERITY_INFO,"WP(%d),%d,%10.6f,%10.6f,%8.3f",cmd_idx,cmd_idx,cmd_lat,cmd_lng,cmd_alt);
-    	Log_Write_HWP(cmd_idx,cmd_lat,cmd_lng,cmd_alt,0);
-    }
-    // ========================================================================================
-
+    gcs_send_hwp_info(cmd);
 
 }
 
@@ -517,15 +503,11 @@ void Plane::do_land(const AP_Mission::Mission_Command& cmd)
     }
 #endif
 
-    float lcmd_lat = cmd.content.location.lat*TO_DEG_FORMAT;
-    float lcmd_lng = cmd.content.location.lng*TO_DEG_FORMAT;
-    float lcmd_alt = cmd.content.location.alt/100.0f;
-    int16_t lcmd_idx = cmd.index;
-
-    gcs().send_text(MAV_SEVERITY_NOTICE, "LWP(%d),%d,%10.6f,%10.6f,%8.3f",lcmd_idx,lcmd_idx,lcmd_lat,lcmd_lng,lcmd_alt);
+    gcs_send_hwp_info(cmd);
 
     // ========================================================================================
     // After issuing the landing cmd the mission is restored to its original state
+
     headwind_wp.restore_mission();
     if(headwind_wp.hwp_status == HWP_REMOVED)
     {
