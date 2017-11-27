@@ -8,30 +8,44 @@
 #include "AP_HeadWindLanding.h"
 #include <GCS_MAVLink/GCS.h>
 
+#define MIN_RADIUS_DURING_LOITER 30
+#define MAX_RADIUS_DURING_LOITER 150
+
+#define MIN_RADIUS_HEADINGWIND_WAYPOINT 100
+#define MAX_RADIUS_HEADINGWIND_WAYPOINT 400
+
 const AP_Param::GroupInfo AP_HeadWindLanding::var_info[] = {
 
-    // @Param: VWP_ENABLE
-    // @DisplayName: Enabling virtual waypoint feature
-    // @Description: This parameter allows to enable/disable the virtual waypoint feature. By default this feature is enabled.
+    // @Param: HWP_ENABLE
+    // @DisplayName: Enabling heading waypoint feature
+    // @Description: This parameter allows to enable/disable the heading waypoint feature. By default this feature is enabled.
     // @User: Standard
     // @Units: Boolean
     // @Range: 0 1
     // @Increment: 1
     AP_GROUPINFO("ENABLED", 1, AP_HeadWindLanding, hwp_enabled, 0),
 
-    // @Param: DIST_VWP1
-    // @DisplayName: Radius of the extra waypoint area
-    // @Description: Radius of the circle area centered in the landing waypoint where the extra waypoint will be generated
+    // @Param: RADIUS
+    // @DisplayName: Radius of the heading waypoint area
+    // @Description: Radius of the area where the Heading Wind waypoints will be generated
     // @User: Standard
     // @Units: m
-    // @Range: 20 200
+    // @Range: 100 400
     // @Increment: 1
-    AP_GROUPINFO("RADIUS", 2, AP_HeadWindLanding, hwp_radius, 200.0f),
+    AP_GROUPINFO("RADIUS", 2, AP_HeadWindLanding, hwp_radius, 200),
+
+    // @Param: LOITER_RADIUS
+    // @DisplayName: Radius of the loiter waypoint
+    // @Description: Radius of the loiter circle for reaching the desired altitude during the landing phase
+    // @User: Standard
+    // @Units: m
+    // @Range: 30 150
+    // @Increment: 1
+    AP_GROUPINFO("LRADIUS", 3, AP_HeadWindLanding, loiter_radius, 60),
 
     AP_GROUPEND
 
 };
-
 
 AP_HeadWindLanding::AP_HeadWindLanding(AP_Mission &mission, AP_AHRS_NavEKF &ahrs):
 	hwp_status(HWP_NOT_INITIALIZED),
@@ -202,6 +216,12 @@ void AP_HeadWindLanding::generate_hw_waypoints(const AP_Mission::Mission_Command
 		// This value has to be divided by 3, since we have 3 virtual waypoints.
 		// Therefore minimum_distance is 54.29 --> 55 meters.
 
+		if(hwp_radius < MIN_RADIUS_HEADINGWIND_WAYPOINT)
+			hwp_radius = MIN_RADIUS_HEADINGWIND_WAYPOINT;
+
+		if(hwp_radius > MAX_RADIUS_HEADINGWIND_WAYPOINT)
+			hwp_radius = MAX_RADIUS_HEADINGWIND_WAYPOINT;
+
 		dist_hwpl_1 = hwp_radius / 2.0f;
 		dist_hwpl_2 = hwp_radius * (3.0f/4.0f);
 		dist_hwpl_3 = hwp_radius;
@@ -263,7 +283,14 @@ void AP_HeadWindLanding::generate_hw_waypoints(const AP_Mission::Mission_Command
 		// Overwrite command id and waypoint coordinates
 		hwp3.id = MAV_CMD_NAV_LOITER_TO_ALT;
 		hwp3.content.location = loc_hwp3;
-		hwp3.p1 = 30;
+
+		if(loiter_radius < MIN_RADIUS_DURING_LOITER)
+			loiter_radius = MIN_RADIUS_DURING_LOITER;
+
+		if(loiter_radius > MAX_RADIUS_DURING_LOITER)
+			loiter_radius = MAX_RADIUS_DURING_LOITER;
+
+		hwp3.p1 = (uint16_t)loiter_radius;
 
 		// Add the new command to the mission
 

@@ -111,9 +111,11 @@ public:
 protected:
 
     AP_Int8  hwp_enabled;
-    AP_Float hwp_radius;
+    AP_Int16 hwp_radius;
     AP_Float heading_wind;
     AP_Float hwp_spd;
+
+    AP_Int16 loiter_radius;
 
     AP_Float dist_hwpl_1;
     AP_Float dist_hwpl_2;
