@@ -2009,6 +2009,27 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
         plane.adsb.handle_message(chan, msg);
         break;
 
+    // This message comes from GDPilot
+    case MAVLINK_MSG_ID_INITIAL_CHECK:
+    	mavlink_initial_check_t initial_check;
+        mavlink_msg_initial_check_decode(msg, &initial_check);
+
+        if(initial_check.board == 'G')
+        {
+        	if(initial_check.err_num == 0)
+        	{
+        		// everything is fine on the GDPilot side and we allow the PixHawk to arm
+				plane.arming.arm(0);
+        	}
+        	else
+        	{
+        		// I keep the PixHawk disarmed and send a message to the Ground Control Station
+        		gcs().send_text(MAV_SEVERITY_WARNING, "UAV DISARMED. Reason: %s",initial_check.err_msg);
+        		plane.arming.disarm();
+        	}
+        }
+    	break;
+
     default:
         handle_common_message(msg);
         break;
