@@ -209,6 +209,16 @@ void Plane::init_ardupilot()
     // disable safety if requested
     BoardConfig.init_safety();
 
+    // The UAV is forced to disarm state only if we are using GDPilot and the board is initializing
+    if(arming.arming_required() == AP_Arming::YES_GDPILOT)
+    {
+    	// gcs().send_text(MAV_SEVERITY_INFO, "GDPILOT status required for arming.");
+    	// I force the UAV to disarm
+    	plane.arming.disarm();
+    }
+
+    gcs().send_text(MAV_SEVERITY_INFO, "ARMING METHOD, REQUIRED: %d, %d",arming.get_arming_method(),arming.arming_required());
+
     // At the end of the start-up sequence, we check if the HeadWind waypoint feature is enabled.
     // If yes we initializes the indexes using the current mission.
     // If the user changes the mission, we will re-do the initialization

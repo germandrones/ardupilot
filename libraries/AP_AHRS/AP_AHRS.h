@@ -52,6 +52,8 @@ class AP_AHRS
 public:
     friend class AP_AHRS_View;
     
+    // TODO: Check if I have to modify the initial ahrs orientation also here
+
     // Constructor
     AP_AHRS(AP_InertialSensor &ins, AP_Baro &baro, AP_GPS &gps) :
         roll(0.0f),

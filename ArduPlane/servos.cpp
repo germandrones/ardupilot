@@ -590,6 +590,7 @@ void Plane::set_servos(void)
         //This little segment aims to avoid this.
         switch (arming.arming_required()) { 
         case AP_Arming::NO:
+        case AP_Arming::YES_GDPILOT:
             //keep existing behavior: do nothing to radio_out
             //(don't disarm throttle channel even if AP_Arming class is)
             break;

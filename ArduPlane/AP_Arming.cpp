@@ -25,7 +25,6 @@ enum HomeState AP_Arming_Plane::home_status() const
 
 /*
   additional arming checks for plane
-
  */
 bool AP_Arming_Plane::pre_arm_checks(bool report)
 {

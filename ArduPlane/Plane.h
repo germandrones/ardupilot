@@ -804,6 +804,18 @@ private:
     
     AP_HeadWindLanding headwind_wp{mission,ahrs};
 
+    struct _gdstatus{
+    	int8_t err_num;
+		char err_msg[100];
+		bool msg_visualized:1;
+
+		_gdstatus():err_num(-1),msg_visualized(false)
+		{
+			strcpy(err_msg,"GDPILOT IS INITIALIZING");
+		}
+
+    } gd_status;
+
 #if CONFIG_HAL_BOARD == HAL_BOARD_PX4
     // the crc of the last created PX4Mixer
     int32_t last_mixer_crc = -1;

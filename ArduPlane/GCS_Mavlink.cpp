@@ -2011,22 +2011,21 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
 
     // This message comes from GDPilot
     case MAVLINK_MSG_ID_INITIAL_CHECK:
+
+    	// TODO: Verify that we are on the ground before modifying the arming variable.
+    	// if(on_the_ground)...
+
     	mavlink_initial_check_t initial_check;
         mavlink_msg_initial_check_decode(msg, &initial_check);
 
+        // The field board is meant to detect different companion boards
+        // For the moment, we have G = GDPilot, P = PixHawk
         if(initial_check.board == 'G')
         {
-        	if(initial_check.err_num == 0)
-        	{
-        		// everything is fine on the GDPilot side and we allow the PixHawk to arm
-				plane.arming.arm(0);
-        	}
-        	else
-        	{
-        		// I keep the PixHawk disarmed and send a message to the Ground Control Station
-        		gcs().send_text(MAV_SEVERITY_WARNING, "UAV DISARMED. Reason: %s",initial_check.err_msg);
-        		plane.arming.disarm();
-        	}
+        	plane.gd_status.err_num = initial_check.err_num;
+			strncpy(plane.gd_status.err_msg, initial_check.err_msg, 100);
+			plane.gd_status.msg_visualized = false;
+			//gcs().send_text(MAV_SEVERITY_NOTICE, "GD MSG: %d, %s",plane.gd_status.err_num,plane.gd_status.err_msg);
         }
     	break;
 

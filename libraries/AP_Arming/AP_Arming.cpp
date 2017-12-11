@@ -586,6 +586,12 @@ AP_Arming::ArmingRequired AP_Arming::arming_required()
     return (AP_Arming::ArmingRequired)require.get();
 }
 
+AP_Arming::ArmingMethod AP_Arming::get_arming_method()
+{
+    return (AP_Arming::ArmingMethod)arming_method;
+}
+
+
 // Copter and sub share the same RC input limits
 // Copter checks that min and max have been configured by default, Sub does not
 bool AP_Arming::rc_checks_copter_sub(const bool display_failure, const RC_Channel *channels[4], const bool check_min_max) const

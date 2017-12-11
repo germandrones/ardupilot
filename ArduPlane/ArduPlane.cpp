@@ -391,7 +391,44 @@ void Plane::one_second_loop()
     // update notify flags
     AP_Notify::flags.pre_arm_check = arming.pre_arm_checks(false);
     AP_Notify::flags.pre_arm_gps_check = true;
-    AP_Notify::flags.armed = arming.is_armed() || arming.arming_required() == AP_Arming::NO;
+
+    // Only the GDPilot is allowed to arm the UAV.
+    // Until pre_arm_check is false, we keep the UAV disarmed
+    // This is very critical.
+    // !!!WE MUST ABSOLUTELY SURE THAT THE UAV IS NOT FLYING!!!
+
+    // TODO: See if I should set the variable AP_Notify::flags.armed after the GDPilot AND the PixHawk checking
+    if(arming.arming_required() == AP_Arming::YES_GDPILOT)
+    {
+    	// Are we on the ground? (TODO: include other checks, such as motors spinning)
+    	if(plane.is_flying() == false)
+    	{
+    		switch(plane.gd_status.err_num)
+    		{
+    			case 0:
+    				if(!plane.gd_status.msg_visualized)
+    				{
+    					gcs().send_text(MAV_SEVERITY_NOTICE, "GD: READY");
+    					AP_Notify::flags.armed = true;
+    					plane.gd_status.msg_visualized = true;
+    				}
+    				break;
+
+    			// Insert here the other cases
+
+    			case 127:
+    				if(!plane.gd_status.msg_visualized)
+    				{
+    					gcs().send_text(MAV_SEVERITY_NOTICE, "GD: NOT READY");
+    					AP_Notify::flags.armed = false;
+    					plane.gd_status.msg_visualized = true;
+    				}
+    				break;
+    		}
+    	}
+    }
+    else
+    	AP_Notify::flags.armed = arming.is_armed() || arming.arming_required() == AP_Arming::NO;
 
 #if AP_TERRAIN_AVAILABLE
     if (should_log(MASK_LOG_GPS)) {
@@ -1174,8 +1211,7 @@ void Plane::disarm_if_autoland_complete()
 {
     if (landing.get_disarm_delay() > 0 &&
         !is_flying() &&
-        arming.arming_required() != AP_Arming::NO &&
-        arming.is_armed()) {
+        arming.arming_required() != AP_Arming::NO && arming.arming_required() != AP_Arming::YES_GDPILOT && arming.is_armed()) {
         /* we have auto disarm enabled. See if enough time has passed */
         if (millis() - auto_state.last_flying_ms >= landing.get_disarm_delay()*1000UL) {
             if (disarm_motors()) {

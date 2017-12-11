@@ -29,17 +29,20 @@ public:
     enum ArmingMethod {
         NONE = 0,
         RUDDER,
-        MAVLINK
+        MAVLINK,
+		GDPILOT
     };
 
     enum ArmingRequired {
         NO           = 0,
         YES_MIN_PWM  = 1,
-        YES_ZERO_PWM = 2
+        YES_ZERO_PWM = 2,
+		YES_GDPILOT  = 3,
     };
 
     // these functions should not be used by Copter which holds the armed state in the motors library
     ArmingRequired arming_required();
+    ArmingMethod   get_arming_method();
     virtual bool arm(uint8_t method);
     bool disarm();
     bool is_armed();
