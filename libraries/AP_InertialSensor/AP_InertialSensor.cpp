@@ -444,7 +444,7 @@ AP_InertialSensor::AP_InertialSensor() :
     _backend_count(0),
     _accel(),
     _gyro(),
-    _board_orientation(ROTATION_ROLL_90_PITCH_180_YAW_90), // This should help the ARHS to converge faster to the actual attitude
+    _board_orientation(ROTATION_NONE), // ROTATION_ROLL_90_PITCH_180_YAW_90), // This should help the ARHS to converge faster to the actual attitude
     _primary_gyro(0),
     _primary_accel(0),
     _log_raw_bit(-1),

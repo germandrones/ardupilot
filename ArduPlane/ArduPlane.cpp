@@ -392,41 +392,8 @@ void Plane::one_second_loop()
     AP_Notify::flags.pre_arm_check = arming.pre_arm_checks(false);
     AP_Notify::flags.pre_arm_gps_check = true;
 
-    // Only the GDPilot is allowed to arm the UAV.
-    // Until pre_arm_check is false, we keep the UAV disarmed
-    // This is very critical.
-    // !!!WE MUST ABSOLUTELY SURE THAT THE UAV IS NOT FLYING!!!
-
-    // TODO: See if I should set the variable AP_Notify::flags.armed after the GDPilot AND the PixHawk checking
     if(arming.arming_required() == AP_Arming::YES_GDPILOT)
-    {
-    	// Are we on the ground? (TODO: include other checks, such as motors spinning)
-    	if(plane.is_flying() == false)
-    	{
-    		switch(plane.gd_status.err_num)
-    		{
-    			case 0:
-    				if(!plane.gd_status.msg_visualized)
-    				{
-    					gcs().send_text(MAV_SEVERITY_NOTICE, "GD: READY");
-    					AP_Notify::flags.armed = true;
-    					plane.gd_status.msg_visualized = true;
-    				}
-    				break;
-
-    			// Insert here the other cases
-
-    			case 127:
-    				if(!plane.gd_status.msg_visualized)
-    				{
-    					gcs().send_text(MAV_SEVERITY_NOTICE, "GD: NOT READY");
-    					AP_Notify::flags.armed = false;
-    					plane.gd_status.msg_visualized = true;
-    				}
-    				break;
-    		}
-    	}
-    }
+    	initial_checks();
     else
     	AP_Notify::flags.armed = arming.is_armed() || arming.arming_required() == AP_Arming::NO;
 
@@ -453,6 +420,75 @@ void Plane::one_second_loop()
     // indicates that the sensor or subsystem is present but not
     // functioning correctly
     update_sensor_status_flags();
+}
+
+// This function performs the initial checks when the ArmingRequired parameter is set to YES_GDPILOT
+// Only the GDPilot is allowed to arm the UAV. This is very critical.
+// !!!WE MUST ABSOLUTELY SURE THAT THE UAV IS NOT FLYING!!!
+void Plane::initial_checks()
+{
+
+	// TODO: See if I should set the variable AP_Notify::flags.armed after the GDPilot AND the PixHawk checking
+
+   	// Are we on the ground?
+	// We can enter in this routine only if we are currently disarmed and we are not flying
+	if(plane.is_flying() == false)
+	{
+		switch(plane.gd_status.err_num)
+		{
+			case 0:
+				if(!plane.gd_status.msg_visualized)
+				{
+					gcs().send_text(MAV_SEVERITY_NOTICE, "GD: READY");
+					// GD Pilot is ready and I force all the gd flags to false
+					AP_Notify::flags.gd_sd_not_logging = false;
+					AP_Notify::flags.gd_fmode_wrong = false;
+					AP_Notify::flags.gd_disarmed = false;
+					// and I allow the UAV to arm
+					AP_Notify::flags.armed = true;
+					plane.gd_status.msg_visualized = true;
+				}
+				break;
+
+			// For all the errors, I simply shows the message and keep the UAV disarmed
+			case 1:
+				if(!plane.gd_status.msg_visualized)
+				{
+					gcs().send_text(MAV_SEVERITY_CRITICAL, "GD: %s",plane.gd_status.err_msg);
+					// Something is not ok on the GDPilot side. I keep the UAV disarmed.
+					AP_Notify::flags.gd_fmode_wrong = true;
+					AP_Notify::flags.armed = false;
+					plane.gd_status.msg_visualized = true;
+				}
+				break;
+
+			case 2:
+				if(!plane.gd_status.msg_visualized)
+				{
+					gcs().send_text(MAV_SEVERITY_CRITICAL, "GD: %s",plane.gd_status.err_msg);
+					// Something is not ok on the GDPilot side. I keep the UAV disarmed.
+					AP_Notify::flags.gd_sd_not_logging = true;
+					AP_Notify::flags.armed = false;
+					plane.gd_status.msg_visualized = true;
+				}
+				break;
+
+			case 127:
+				if(!plane.gd_status.msg_visualized)
+				{
+					gcs().send_text(MAV_SEVERITY_CRITICAL, "GD: NOT READY");
+					// The GDPilot sent a specific message for disarming
+					AP_Notify::flags.gd_disarmed = true;
+					AP_Notify::flags.armed = false;
+					plane.gd_status.msg_visualized = true;
+				}
+				break;
+
+			default:
+				// Initial value is -1. We don't do anything
+				break;
+		}
+	}
 }
 
 #ifdef HW_TEST

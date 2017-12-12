@@ -88,6 +88,9 @@ public:
         uint32_t vehicle_lost       : 1;    // 1 when lost copter tone is requested (normally only used for copter)
         uint32_t waiting_for_throw  : 1;    // 1 when copter is in THROW mode and waiting to detect the user hand launch
         uint32_t powering_off       : 1;    // 1 when the vehicle is powering off
+        uint32_t gd_sd_not_logging  : 1;    // 1 when the GDPilot sdcard is not logging
+		uint32_t gd_fmode_wrong     : 1;    // 1 when the GDPilot flight mode is wrong
+		uint32_t gd_disarmed        : 1;    // 1 when GDPilot sent the message for disarming
     };
 
     /// notify_events_type - bitmask of active events.

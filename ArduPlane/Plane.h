@@ -1119,6 +1119,10 @@ private:
     bool avoid_adsb_init(bool ignore_checks);
     void avoid_adsb_run();
 
+    // This function performs all the initial checks on PixHawk and GDPilot side.
+    // It is called only when the ArmingRequired parameter is set to YES_GDPILOT
+    void initial_checks();
+
 public:
     void mavlink_delay_cb();
     void failsafe_check(void);
