@@ -114,6 +114,7 @@
 #include <AP_InertialNav/AP_InertialNav.h>
 
 #include <AP_HeadWindLanding/AP_HeadWindLanding.h>
+#include <AP_MissionCheck/MissionCheck.h>
 
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
 #include <SITL/SITL.h>
@@ -815,6 +816,10 @@ private:
 		}
 
     } gd_status;
+
+    MissionCheck* mission_checker;
+
+    void check_mission();
 
 #if CONFIG_HAL_BOARD == HAL_BOARD_PX4
     // the crc of the last created PX4Mixer

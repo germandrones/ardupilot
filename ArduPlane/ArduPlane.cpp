@@ -477,8 +477,11 @@ void Plane::initial_checks()
 				if(!plane.gd_status.msg_visualized)
 				{
 					gcs().send_text(MAV_SEVERITY_CRITICAL, "GD: NOT READY");
-					// The GDPilot sent a specific message for disarming
-					AP_Notify::flags.gd_disarmed = true;
+
+					AP_Notify::flags.gd_sd_not_logging = false;
+					AP_Notify::flags.gd_fmode_wrong = false;
+					AP_Notify::flags.gd_disarmed = false;
+
 					AP_Notify::flags.armed = false;
 					plane.gd_status.msg_visualized = true;
 				}

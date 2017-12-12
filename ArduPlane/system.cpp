@@ -796,3 +796,9 @@ bool Plane::disarm_motors(void)
     
     return true;
 }
+
+// Entry point for check mission procedure
+void Plane::check_mission()
+{
+
+}
