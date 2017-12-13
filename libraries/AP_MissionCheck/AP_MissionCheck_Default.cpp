@@ -11,18 +11,13 @@ void MissionCheck_Default::init_mission()
 {
     asprintf(&msg,"INIT Default Mission");
     logInfo(msg);
+
+    // Nothing to do here for the moment
 }
 
 void MissionCheck_Default::notify_user()
 {
     // The idea of this function is to drive the LED to notify the USER about possible errors
-}
-
-char* MissionCheck_Default::get_mission_type()
-{
-    char* mission_type;
-    asprintf(&mission_type,"DEFAULT");
-    return mission_type;
 }
 
 bool MissionCheck_Default::check()

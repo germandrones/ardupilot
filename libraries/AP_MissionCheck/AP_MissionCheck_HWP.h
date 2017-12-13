@@ -24,7 +24,6 @@ public:
     void init_mission();
     bool check();
     void notify_user();
-    char* get_mission_type();
      
 private:
     

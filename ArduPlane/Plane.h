@@ -819,7 +819,7 @@ private:
 
     MissionCheck* mission_checker;
 
-    void check_mission();
+    bool check_mission();
 
 #if CONFIG_HAL_BOARD == HAL_BOARD_PX4
     // the crc of the last created PX4Mixer

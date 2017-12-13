@@ -434,6 +434,7 @@ void Plane::initial_checks()
 	// We can enter in this routine only if we are currently disarmed and we are not flying
 	if(plane.is_flying() == false)
 	{
+
 		switch(plane.gd_status.err_num)
 		{
 			case 0:
@@ -444,6 +445,10 @@ void Plane::initial_checks()
 					AP_Notify::flags.gd_sd_not_logging = false;
 					AP_Notify::flags.gd_fmode_wrong = false;
 					AP_Notify::flags.gd_disarmed = false;
+
+					// When everything is fine on the GDPilot, I start checking the mission
+					check_mission();
+
 					// and I allow the UAV to arm
 					AP_Notify::flags.armed = true;
 					plane.gd_status.msg_visualized = true;

@@ -20,14 +20,6 @@ void MissionCheck_HWP::notify_user()
     // The idea of this function is to drive the LED to notify the USER about possible errors
 }
 
-char* MissionCheck_HWP::get_mission_type()
-{
-    char* mission_type;
-    asprintf(&mission_type,"VWP");
-    return mission_type;
-
-}
-
 bool MissionCheck_HWP::check()
 {
     

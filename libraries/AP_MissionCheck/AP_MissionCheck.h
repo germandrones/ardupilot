@@ -32,8 +32,6 @@ public:
     virtual bool check()             = 0;
     virtual void init_mission()      = 0;
     virtual void notify_user()       = 0;
-    
-    virtual char* get_mission_type() = 0;
 
 protected:
 
