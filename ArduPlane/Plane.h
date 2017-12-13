@@ -808,9 +808,10 @@ private:
     struct _gdstatus{
     	int8_t err_num;
 		char err_msg[100];
+		int32_t flight_mode;
 		bool msg_visualized:1;
 
-		_gdstatus():err_num(-1),msg_visualized(false)
+		_gdstatus():err_num(-1),msg_visualized(false),flight_mode(-1)
 		{
 			strcpy(err_msg,"GDPILOT IS INITIALIZING");
 		}

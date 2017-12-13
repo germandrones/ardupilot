@@ -824,4 +824,6 @@ bool Plane::check_mission()
 
     */
 
+	return false;
+
 }

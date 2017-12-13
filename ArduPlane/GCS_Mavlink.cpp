@@ -2023,6 +2023,7 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
         if(initial_check.board == 'G')
         {
         	plane.gd_status.err_num = initial_check.err_num;
+        	plane.gd_status.flight_mode = initial_check.fmode;
 			strncpy(plane.gd_status.err_msg, initial_check.err_msg, 100);
 			plane.gd_status.msg_visualized = false;
 			//gcs().send_text(MAV_SEVERITY_NOTICE, "GD MSG: %d, %s",plane.gd_status.err_num,plane.gd_status.err_msg);
