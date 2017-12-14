@@ -1,24 +1,24 @@
 /*
- * AP_MissionCheck_Default.h
+ * AP_MissionCheck_STD.h
  *
  *  Created on: December 12, 2017
  *      Author: Alessandro Benini
  */
 
-#ifndef AP_MISSIONCHECK_DEFAULT_H_
-#define AP_MISSIONCHECK_DEFAULT_H_
+#ifndef AP_MISSIONCHECK_STD_H_
+#define AP_MISSIONCHECK_STD_H_
 
 #include <GCS_MAVLink/GCS.h>
 #include <DataFlash/DataFlash.h>
 
 #include "AP_MissionCheck.h"
 
-class MissionCheck_Default : public MissionCheck
+class MissionCheck_STD : public MissionCheck
 {
   
 public:
   
-    MissionCheck_Default(AP_Mission &mission, DataFlash_Class &dataflash, GCS& gcs);
+    MissionCheck_STD(AP_Mission &mission, DataFlash_Class &dataflash, GCS& gcs);
     
     void init_mission();
     bool check();
@@ -27,7 +27,7 @@ public:
      
 private:
     
-    bool default_mission_usable;
+    bool std_mission_usable;
   
 };
 

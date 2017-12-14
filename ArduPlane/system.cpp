@@ -217,8 +217,6 @@ void Plane::init_ardupilot()
     	plane.arming.disarm();
     }
 
-    check_mission();
-
 }
 
 //********************************************************************************
@@ -777,20 +775,21 @@ bool Plane::check_mission()
 	if(headwind_wp.is_hwp_enabled())
 		mission_checker = new MissionCheck_HWP{mission,DataFlash,headwind_wp,_gcs};
 	else
-		mission_checker = new MissionCheck_Default{mission,DataFlash,_gcs};
+		mission_checker = new MissionCheck_STD{mission,DataFlash,_gcs};
 
 	bool successfull = mission_checker->check();
 
 	if(successfull)
 	{
 		mission_checker->init_mission();
+		return true;
 	}
 	else
 	{
-
+		// The stored mission is not ok. We build a default mission and then we notify the user
+		// The default mission contains
+		return false;
 	}
-
-	mission_checker->notify_user();
 
 	/**
 
@@ -823,7 +822,5 @@ bool Plane::check_mission()
     }
 
     */
-
-	return false;
 
 }

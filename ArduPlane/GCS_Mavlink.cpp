@@ -164,6 +164,31 @@ void Plane::send_extended_status1(mavlink_channel_t chan)
         0, 0, 0, 0);
 }
 
+void Plane::send_acknowledge_gdpilot(mavlink_channel_t chan)
+{
+	mavlink_message_t message;
+	mavlink_initial_check_t initial_check;
+
+    // The field board is meant to detect different companion boards
+    // For the moment, we have G = GDPilot, P = PixHawk
+    initial_check.board = 'P';
+    initial_check.fmode = plane.px_status.flight_mode;
+
+    initial_check.err_num = plane.px_status.err_num;
+    strncpy(initial_check.err_msg,plane.px_status.err_msg, 100);
+
+    // Send message to GDPilot
+    // remember_to_send_message_here
+
+    mavlink_msg_initial_check_send(
+    		chan,
+			initial_check.board,
+			initial_check.err_num,
+			initial_check.err_msg,
+			initial_check.fmode);
+
+}
+
 void Plane::send_location_neitzke(mavlink_channel_t chan)
 {
 
@@ -513,6 +538,7 @@ bool GCS_MAVLINK::is_message_nesesary_for_np(enum ap_message id)
 
 		case	MSG_CURRENT_WAYPOINT:
 		case	MSG_NEXT_WAYPOINT:
+		case 	MSG_ACK_GDPILOT:
 
 			return true;
 
@@ -614,6 +640,11 @@ bool GCS_MAVLINK_Plane::try_send_message(enum ap_message id)
 		CHECK_PAYLOAD_SIZE(LOCAL_POSITION_NEITZKE);
 		plane.send_location_neitzke(chan);
 	break;
+
+	case MSG_ACK_GDPILOT:
+		CHECK_PAYLOAD_SIZE(INITIAL_CHECK);
+		plane.send_acknowledge_gdpilot(chan);
+		break;
 
     case MSG_LOCAL_POSITION:
         CHECK_PAYLOAD_SIZE(LOCAL_POSITION_NED);

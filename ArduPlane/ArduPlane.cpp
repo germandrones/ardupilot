@@ -446,11 +446,35 @@ void Plane::initial_checks()
 					AP_Notify::flags.gd_fmode_wrong = false;
 					AP_Notify::flags.gd_disarmed = false;
 
-					// When everything is fine on the GDPilot, I start checking the mission
-					check_mission();
+					gcs().send_text(MAV_SEVERITY_NOTICE, "CHECKING MISSION");
 
-					// and I allow the UAV to arm
-					AP_Notify::flags.armed = true;
+					// When everything is fine on the GDPilot, I start checking the mission
+					bool mission_checked = check_mission();
+
+					if(mission_checked)
+					{
+						// and I allow the UAV to arm
+						strncpy(px_status.err_msg,"ACK",4);
+						px_status.err_num = 1;
+						px_status.flight_mode = control_mode;
+						px_status.msg_visualized = false;
+
+						gcs().send_message(MSG_ACK_GDPILOT);
+
+						AP_Notify::flags.armed = true;
+					}
+					else
+					{
+						strncpy(px_status.err_msg,"NACK",5);
+						px_status.err_num = 0;
+						px_status.flight_mode = control_mode;
+						px_status.msg_visualized = false;
+
+						gcs().send_message(MSG_ACK_GDPILOT);
+
+						AP_Notify::flags.armed = false;
+					}
+
 					plane.gd_status.msg_visualized = true;
 				}
 				break;

@@ -805,18 +805,18 @@ private:
     
     AP_HeadWindLanding headwind_wp{mission,ahrs};
 
-    struct _gdstatus{
+    struct _status{
     	int8_t err_num;
 		char err_msg[100];
 		int32_t flight_mode;
 		bool msg_visualized:1;
 
-		_gdstatus():err_num(-1),msg_visualized(false),flight_mode(-1)
+		_status():err_num(-1),msg_visualized(false),flight_mode(-1)
 		{
 			strcpy(err_msg,"GDPILOT IS INITIALIZING");
 		}
 
-    } gd_status;
+    } gd_status, px_status;
 
     MissionCheck* mission_checker;
 
@@ -848,6 +848,9 @@ private:
     void send_wind(mavlink_channel_t chan);
     void send_pid_tuning(mavlink_channel_t chan);
     void send_rpm(mavlink_channel_t chan);
+
+    // Send ack/nack to GDPilot when PixHawk is ready to arm
+    void send_acknowledge_gdpilot(mavlink_channel_t chan);
 
     void send_aoa_ssa(mavlink_channel_t chan);
 
