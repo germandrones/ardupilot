@@ -809,9 +809,9 @@ private:
     	int8_t err_num;
 		char err_msg[100];
 		int32_t flight_mode;
-		bool msg_visualized:1;
+		bool msg_processed:1;
 
-		_status():err_num(-1),msg_visualized(false),flight_mode(-1)
+		_status():err_num(-1),msg_processed(false),flight_mode(-1)
 		{
 			strcpy(err_msg,"GDPILOT IS INITIALIZING");
 		}
@@ -851,6 +851,8 @@ private:
 
     // Send ack/nack to GDPilot when PixHawk is ready to arm
     void send_acknowledge_gdpilot(mavlink_channel_t chan);
+
+    bool ack_msg_must_be_sent_to_gdpilot;
 
     void send_aoa_ssa(mavlink_channel_t chan);
 

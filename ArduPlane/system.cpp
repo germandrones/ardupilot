@@ -217,6 +217,8 @@ void Plane::init_ardupilot()
     	plane.arming.disarm();
     }
 
+    ack_msg_must_be_sent_to_gdpilot = false;
+
 }
 
 //********************************************************************************
@@ -782,45 +784,15 @@ bool Plane::check_mission()
 	if(successfull)
 	{
 		mission_checker->init_mission();
+		ack_msg_must_be_sent_to_gdpilot = true;
 		return true;
 	}
 	else
 	{
 		// The stored mission is not ok. We build a default mission and then we notify the user
 		// The default mission contains
+		ack_msg_must_be_sent_to_gdpilot = false;
 		return false;
 	}
-
-	/**
-
-    // At the end of the start-up sequence, we check if the HeadWind waypoint feature is enabled.
-    // If yes we initializes the indexes using the current mission.
-    // If the user changes the mission, we will re-do the initialization
-    if(headwind_wp.is_hwp_enabled() && headwind_wp.hwp_status == HWP_NOT_INITIALIZED)
-    {
-    	// Calculate the indexes required for modifying the mission
-    	headwind_wp.init_HWP();
-
-        // Currently, if the index calculation fails we disable the HeadWind Waypoint feature
-        // We could think about aborting the mission in some particular circumstances.
-        if(headwind_wp.hwp_status == HWP_INITIALIZED && headwind_wp.hwp_error == HWP_NO_ERROR)
-        {
-        	gcs().send_text(MAV_SEVERITY_INFO, "Num commands: %d",headwind_wp.get_num_commands());
-        	gcs().send_text(MAV_SEVERITY_INFO, "Idx Land WP: %d",headwind_wp.get_idx_landing_wp());
-        	gcs().send_text(MAV_SEVERITY_INFO, "Idx Last MWP: %d",headwind_wp.get_idx_last_mission_wp());
-        	gcs().send_text(MAV_SEVERITY_INFO, "Idx HWP: %d",headwind_wp.get_idx_hwp());
-        }
-        else
-        {
-        	// If I get an error during the initialization of the headwind waypoints, I don't disable the
-        	// feature (since the user could upload a new mission) but I ignore then until the variable
-        	// hwp_error is not set to HWP_NO_ERROR
-        	gcs().send_text(MAV_SEVERITY_INFO, "Error during index generation: %d",headwind_wp.hwp_error);
-        	gcs().send_text(MAV_SEVERITY_INFO, "HEADING WIND WAYPOINTS IGNORED");
-        }
-        // ========================================================================================
-    }
-
-    */
 
 }
