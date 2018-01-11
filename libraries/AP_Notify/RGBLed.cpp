@@ -334,7 +334,7 @@ void RGBLed::update_colours(void)
     }
 
     // GDPilot status LED notification - These actions are performed after everything else
-    if(AP_Notify::flags.gd_sd_not_logging || AP_Notify::flags.gd_fmode_wrong || AP_Notify::flags.gd_disarmed)
+    if(AP_Notify::flags.gd_sd_not_logging || AP_Notify::flags.gd_fmode_wrong || AP_Notify::flags.gd_disarmed || AP_Notify::flags.px_not_ready)
     {
     	switch(step){
     	case 0:

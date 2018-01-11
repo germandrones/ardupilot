@@ -816,7 +816,7 @@ private:
 			strcpy(err_msg,"GDPILOT IS INITIALIZING");
 		}
 
-    } gd_status, px_status;
+    } gd_status;
 
     MissionCheck* mission_checker;
 
@@ -851,8 +851,6 @@ private:
 
     // Send ack/nack to GDPilot when PixHawk is ready to arm
     void send_acknowledge_gdpilot(mavlink_channel_t chan);
-
-    bool ack_msg_must_be_sent_to_gdpilot;
 
     void send_aoa_ssa(mavlink_channel_t chan);
 

@@ -166,42 +166,8 @@ void Plane::send_extended_status1(mavlink_channel_t chan)
 
 void Plane::send_acknowledge_gdpilot(mavlink_channel_t chan)
 {
-/**
-	mavlink_initial_check_t initial_check;
-
-    // The field "board" is meant to detect different companion boards
-    // For the moment, we have G = GDPilot, P = PixHawk
-    initial_check.board = 'P';
-    initial_check.fmode = plane.px_status.flight_mode;
-
-    initial_check.err_num = plane.px_status.err_num;
-    strncpy(initial_check.err_msg,plane.px_status.err_msg, 100);
-*/
-	char board = 'P';
-    char no_msg[100];
-    strncpy(no_msg,"NO_MESSAGE",12);
-
-    int8_t err_num = plane.px_status.err_num;
-    int32_t fmode = plane.px_status.flight_mode;
-
-    // Send message to GDPilot
-    gcs().send_text(MAV_SEVERITY_NOTICE, "ACK_2");
-
-    mavlink_msg_initial_check_send(
-    		chan,
-			board,
-			err_num,
-			no_msg,
-			fmode);
-    /**
-    mavlink_msg_initial_check_send(
-    		chan,
-			initial_check.board,
-			initial_check.err_num,
-			initial_check.err_msg,
-			initial_check.fmode);
-			*/
-
+	// TODO: Use the same mesage for sending both the ACK or NACK
+	mavlink_msg_ack_gdpilot_send(chan,1);
 }
 
 void Plane::send_location_neitzke(mavlink_channel_t chan)
@@ -651,10 +617,8 @@ bool GCS_MAVLINK_Plane::try_send_message(enum ap_message id)
 	case MSG_ACK_GDPILOT:
 		if (!neitzkePilot_detected)
 			break;
-		gcs().send_text(MAV_SEVERITY_NOTICE, "ACK_1");
 		CHECK_PAYLOAD_SIZE(INITIAL_CHECK);
 		plane.send_acknowledge_gdpilot(chan);
-		plane.ack_msg_must_be_sent_to_gdpilot = false;
 		break;
 
 	case MSG_LOCATION_NEITZKE:
@@ -949,13 +913,6 @@ GCS_MAVLINK_Plane::data_stream_send(void)
     send_queued_parameters();
 
     if (gcs().out_of_time()) return;
-
-    if(plane.ack_msg_must_be_sent_to_gdpilot)
-    {
-    	send_message(MSG_ACK_GDPILOT);
-    	//plane.ack_msg_must_be_sent_to_gdpilot = false;
-    	//gcs().send_text(MAV_SEVERITY_INFO, "ACK SENT TO GDPILOT");
-    }
 
     if (plane.in_mavlink_delay) {
 #if HIL_SUPPORT

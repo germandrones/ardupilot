@@ -432,88 +432,91 @@ void Plane::initial_checks()
 
    	// Are we on the ground?
 	// We can enter in this routine only if we are currently disarmed and we are not flying
-	if(plane.is_flying() == false && !plane.gd_status.msg_processed)
+
+	// We have a new message from GDPilot that is not processed
+	if(!plane.gd_status.msg_processed)
 	{
-		switch(plane.gd_status.err_num)
+		// Special case for DISARM message
+		if(plane.gd_status.err_num == 127)
 		{
-			case 0:
+			gcs().send_text(MAV_SEVERITY_CRITICAL, "GD: NOT READY - PH DISARMED");
+
+			AP_Notify::flags.gd_sd_not_logging = false;
+			AP_Notify::flags.gd_fmode_wrong = false;
+			AP_Notify::flags.gd_disarmed = false;
+			AP_Notify::flags.px_not_ready = false;
+
+			arming.disarm();
+			AP_Notify::flags.armed = false;
+		}
+		// For every other message we need to be in disarmed state and not flying
+		else
+		{
+			if(!arming.is_armed() && plane.is_flying() == false)
 			{
-				gcs().send_text(MAV_SEVERITY_NOTICE, "GD: READY");
-				// GD Pilot is ready and I force all the gd flags to false
-				AP_Notify::flags.gd_sd_not_logging = false;
-				AP_Notify::flags.gd_fmode_wrong = false;
-				AP_Notify::flags.gd_disarmed = false;
-
-				gcs().send_text(MAV_SEVERITY_NOTICE, "CHECKING MISSION");
-
-				// When everything is fine on the GDPilot, I start checking the mission
-				bool mission_checked = check_mission();
-
-				if(mission_checked)
+				switch(plane.gd_status.err_num)
 				{
-					// and I allow the UAV to arm
-					strncpy(px_status.err_msg,"ACK",4);
-					px_status.err_num = 1;
-					px_status.flight_mode = control_mode;
-					px_status.msg_processed = false;
+					case 0:
+					{
+						gcs().send_text(MAV_SEVERITY_NOTICE, "GD: READY");
+						// GD Pilot is ready and I force all the gd flags to false
+						AP_Notify::flags.gd_sd_not_logging = false;
+						AP_Notify::flags.gd_fmode_wrong = false;
+						AP_Notify::flags.gd_disarmed = false;
 
-					gcs().send_message(MSG_ACK_GDPILOT);
 
-					AP_Notify::flags.armed = true;
+						// When everything is fine on the GDPilot, I start checking the PixHawk.
+						// For the moment we only check that the mission is set properly
+						// (The PixHawk already have internal check procedures for the sensors)
+						bool mission_checked = check_mission();
+
+						if(mission_checked)
+						{
+							// I allow the UAV to arm
+							bool success = arming.arm(AP_Arming::GDPILOT);
+
+							if(success)
+							{
+								gcs().send_text(MAV_SEVERITY_NOTICE, "UAV ARMED");
+								// Here we send the acknowledge to the GDPIlot board.
+								gcs().send_message(MSG_ACK_GDPILOT);
+								AP_Notify::flags.armed = true;
+							}
+
+						}
+						else
+						{
+							AP_Notify::flags.px_not_ready = true;
+						}
+
+						break;
+					}
+
+					// For all the errors, I simply shows the message and keep the UAV disarmed
+					case 1:
+					{
+						gcs().send_text(MAV_SEVERITY_CRITICAL, "GD: %s",plane.gd_status.err_msg);
+						// Something is not ok on the GDPilot side. I keep the UAV disarmed.
+						AP_Notify::flags.gd_fmode_wrong = true;
+
+						break;
+					}
+
+					case 2:
+					{
+						gcs().send_text(MAV_SEVERITY_CRITICAL, "GD: %s",plane.gd_status.err_msg);
+						// Something is not ok on the GDPilot side. I keep the UAV disarmed.
+						AP_Notify::flags.gd_sd_not_logging = true;
+
+						break;
+					}
+
+					default:
+						// Initial value is -1. We don't do anything
+						break;
 				}
-				else
-				{
-					strncpy(px_status.err_msg,"NACK",5);
-					px_status.err_num = 0;
-					px_status.flight_mode = control_mode;
-					px_status.msg_processed = false;
 
-					gcs().send_message(MSG_ACK_GDPILOT);
-
-					AP_Notify::flags.armed = false;
-				}
-
-				break;
 			}
-
-			// For all the errors, I simply shows the message and keep the UAV disarmed
-			case 1:
-			{
-				gcs().send_text(MAV_SEVERITY_CRITICAL, "GD: %s",plane.gd_status.err_msg);
-				// Something is not ok on the GDPilot side. I keep the UAV disarmed.
-				AP_Notify::flags.gd_fmode_wrong = true;
-				AP_Notify::flags.armed = false;
-
-				break;
-			}
-
-			case 2:
-			{
-				gcs().send_text(MAV_SEVERITY_CRITICAL, "GD: %s",plane.gd_status.err_msg);
-				// Something is not ok on the GDPilot side. I keep the UAV disarmed.
-				AP_Notify::flags.gd_sd_not_logging = true;
-				AP_Notify::flags.armed = false;
-
-				break;
-			}
-
-			// The following message is sent any time the left knob goes in disarm position and
-			// also at the startup of the GD Pilot board
-			case 127:
-			{
-				gcs().send_text(MAV_SEVERITY_CRITICAL, "GD: NOT READY");
-
-				AP_Notify::flags.gd_sd_not_logging = false;
-				AP_Notify::flags.gd_fmode_wrong = false;
-				AP_Notify::flags.gd_disarmed = false;
-				AP_Notify::flags.armed = false;
-
-				break;
-			}
-
-			default:
-				// Initial value is -1. We don't do anything
-				break;
 		}
 
 		// Set the status of message to processed

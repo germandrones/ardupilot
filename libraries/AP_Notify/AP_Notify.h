@@ -91,6 +91,7 @@ public:
         uint32_t gd_sd_not_logging  : 1;    // 1 when the GDPilot sdcard is not logging
 		uint32_t gd_fmode_wrong     : 1;    // 1 when the GDPilot flight mode is wrong
 		uint32_t gd_disarmed        : 1;    // 1 when GDPilot sent the message for disarming
+		uint32_t px_not_ready		: 1;	// 1 when the GDPilot asks to PixHakw if he is ready and it is not ready
     };
 
     /// notify_events_type - bitmask of active events.

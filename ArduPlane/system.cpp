@@ -217,7 +217,7 @@ void Plane::init_ardupilot()
     	plane.arming.disarm();
     }
 
-    ack_msg_must_be_sent_to_gdpilot = false;
+    //ack_msg_must_be_sent_to_gdpilot = false;
 
 }
 
@@ -784,14 +784,12 @@ bool Plane::check_mission()
 	if(successfull)
 	{
 		mission_checker->init_mission();
-		ack_msg_must_be_sent_to_gdpilot = true;
 		return true;
 	}
 	else
 	{
 		// The stored mission is not ok. We build a default mission and then we notify the user
 		// The default mission contains
-		ack_msg_must_be_sent_to_gdpilot = false;
 		return false;
 	}
 

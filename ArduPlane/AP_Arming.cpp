@@ -121,7 +121,7 @@ bool AP_Arming_Plane::ins_checks(bool report)
             if (report) {
                 const char *reason = ahrs.prearm_failure_reason();
                 if (reason) {
-                    gcs().send_text(MAV_SEVERITY_CRITICAL, "PreArm: %s", reason);
+                    gcs().send_text(MAV_SEVERITY_CRITICAL, "PreArm: some errors with AHRS %s", reason);
                 } else {
                     gcs().send_text(MAV_SEVERITY_CRITICAL, "PreArm: AHRS not healthy");
                 }
