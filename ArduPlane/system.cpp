@@ -217,7 +217,7 @@ void Plane::init_ardupilot()
     	plane.arming.disarm();
     }
 
-    //ack_msg_must_be_sent_to_gdpilot = false;
+    ack_to_gdpilot_must_be_sent = false;
 
 }
 

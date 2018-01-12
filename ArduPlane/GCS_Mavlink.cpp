@@ -583,6 +583,9 @@ bool GCS_MAVLINK_Plane::try_send_message(enum ap_message id)
     // wants to fire then don't send a mavlink message. We want to
     // prioritise the main flight control loop over communications
     if (!plane.in_mavlink_delay && plane.scheduler.time_available_usec() < 200) {
+    	// Show this message only if the current id is ACK_GDPILOT
+    	//if(id == MSG_ACK_GDPILOT)
+    	//	gcs().send_text(MAV_SEVERITY_CRITICAL, "Out of time");
         gcs().set_out_of_time(true);
         return false;
     }
@@ -626,6 +629,13 @@ bool GCS_MAVLINK_Plane::try_send_message(enum ap_message id)
 			break;
 		CHECK_PAYLOAD_SIZE(LOCAL_POSITION_NEITZKE);
 		plane.send_location_neitzke(chan);
+		/**
+		if(plane.ack_to_gdpilot_must_be_sent)
+		{
+			plane.send_acknowledge_gdpilot(chan);
+			plane.ack_to_gdpilot_must_be_sent = false;
+		}
+		*/
 	break;
 
     case MSG_LOCAL_POSITION:
@@ -934,34 +944,16 @@ GCS_MAVLINK_Plane::data_stream_send(void)
 
     if (gcs().out_of_time()) return;
 
-    if (stream_trigger(STREAM_RAW_SENSORS)) {
-        send_message(MSG_RAW_IMU1);
-        send_message(MSG_RAW_IMU2);
-        send_message(MSG_RAW_IMU3);
-    }
-
-    if (gcs().out_of_time()) return;
-
-    if (stream_trigger(STREAM_EXTENDED_STATUS)) {
-        send_message(MSG_EXTENDED_STATUS1);
-        send_message(MSG_EXTENDED_STATUS2);
-        send_message(MSG_CURRENT_WAYPOINT);
-        send_message(MSG_GPS_RAW);
-        send_message(MSG_GPS_RTK);
-        send_message(MSG_GPS2_RAW);
-        send_message(MSG_GPS2_RTK);
-        send_message(MSG_NAV_CONTROLLER_OUTPUT);
-        send_message(MSG_FENCE_STATUS);
-        send_message(MSG_POSITION_TARGET_GLOBAL_INT);
-    }
-
-    if (gcs().out_of_time()) return;
-
     if (stream_trigger(STREAM_POSITION)) {
         // sent with GPS read
         send_message(MSG_LOCATION);
         send_message(MSG_LOCAL_POSITION);
         send_message(MSG_LOCATION_NEITZKE);
+        if(plane.ack_to_gdpilot_must_be_sent)
+        {
+        	gcs().send_text(MAV_SEVERITY_INFO, "Sending ACK to GD");
+        	send_message(MSG_ACK_GDPILOT);
+        }
     }
 
     if (gcs().out_of_time()) return;
@@ -1018,6 +1010,29 @@ GCS_MAVLINK_Plane::data_stream_send(void)
         send_message(MSG_EKF_STATUS_REPORT);
         send_message(MSG_GIMBAL_REPORT);
         send_message(MSG_VIBRATION);
+    }
+
+    if (gcs().out_of_time()) return;
+
+    if (stream_trigger(STREAM_EXTENDED_STATUS)) {
+        send_message(MSG_EXTENDED_STATUS1);
+        send_message(MSG_EXTENDED_STATUS2);
+        send_message(MSG_CURRENT_WAYPOINT);
+        send_message(MSG_GPS_RAW);
+        send_message(MSG_GPS_RTK);
+        send_message(MSG_GPS2_RAW);
+        send_message(MSG_GPS2_RTK);
+        send_message(MSG_NAV_CONTROLLER_OUTPUT);
+        send_message(MSG_FENCE_STATUS);
+        send_message(MSG_POSITION_TARGET_GLOBAL_INT);
+    }
+
+    if (gcs().out_of_time()) return;
+
+    if (stream_trigger(STREAM_RAW_SENSORS)) {
+        send_message(MSG_RAW_IMU1);
+        send_message(MSG_RAW_IMU2);
+        send_message(MSG_RAW_IMU3);
     }
 
     if (gcs().out_of_time()) return;
@@ -2035,6 +2050,12 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
         // For the moment, we have G = GDPilot, P = PixHawk
         if(initial_check.board == 'G')
         {
+        	if(initial_check.err_num == 100)
+        	{
+        		//gcs().send_text(MAV_SEVERITY_INFO, "err_num_100");
+        		plane.ack_to_gdpilot_must_be_sent = false;
+        	}
+
         	plane.gd_status.err_num = initial_check.err_num;
         	plane.gd_status.flight_mode = initial_check.fmode;
 			strncpy(plane.gd_status.err_msg, initial_check.err_msg, 100);

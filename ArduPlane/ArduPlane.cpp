@@ -436,7 +436,7 @@ void Plane::initial_checks()
 	// We have a new message from GDPilot that is not processed
 	if(!plane.gd_status.msg_processed)
 	{
-		// Special case for DISARM message
+		// Special cases for DISARM cmd message and UAV ARMED notification message
 		if(plane.gd_status.err_num == 127)
 		{
 			gcs().send_text(MAV_SEVERITY_CRITICAL, "GD: NOT READY - PH DISARMED");
@@ -448,6 +448,11 @@ void Plane::initial_checks()
 
 			arming.disarm();
 			AP_Notify::flags.armed = false;
+		}
+		else if(plane.gd_status.err_num == 100)
+		{
+			gcs().send_text(MAV_SEVERITY_CRITICAL, "GD: %s",plane.gd_status.err_msg);
+			AP_Notify::flags.armed = true;
 		}
 		// For every other message we need to be in disarmed state and not flying
 		else
@@ -477,10 +482,8 @@ void Plane::initial_checks()
 
 							if(success)
 							{
-								gcs().send_text(MAV_SEVERITY_NOTICE, "UAV ARMED");
 								// Here we send the acknowledge to the GDPIlot board.
-								gcs().send_message(MSG_ACK_GDPILOT);
-								AP_Notify::flags.armed = true;
+								ack_to_gdpilot_must_be_sent = true;
 							}
 
 						}

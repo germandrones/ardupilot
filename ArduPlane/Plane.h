@@ -852,6 +852,8 @@ private:
     // Send ack/nack to GDPilot when PixHawk is ready to arm
     void send_acknowledge_gdpilot(mavlink_channel_t chan);
 
+    bool ack_to_gdpilot_must_be_sent;
+
     void send_aoa_ssa(mavlink_channel_t chan);
 
     void gcs_data_stream_send(void);

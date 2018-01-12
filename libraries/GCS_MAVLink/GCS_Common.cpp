@@ -806,10 +806,11 @@ void GCS_MAVLINK::send_message(enum ap_message id)
 
     // if there are no deferred messages, attempt to send straight away:
     if (num_deferred_messages == 0) {
-        if (try_send_message(id)) {
-            // yay, we sent it!
-            return;
-        }
+		if (try_send_message(id)) {
+			// TODO: check here if we are able to send the ACK message to the GDPilot
+			// yay, we sent it!
+			return;
+		}
     }
 
     // we failed to send the message this time around, so try to defer:
