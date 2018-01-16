@@ -768,29 +768,3 @@ bool Plane::disarm_motors(void)
     
     return true;
 }
-
-// Entry point for check mission procedure
-bool Plane::check_mission()
-{
-    //  gcs().send_text(MAV_SEVERITY_INFO, "ARMING METHOD, REQUIRED: %d, %d",arming.get_arming_method(),arming.arming_required());
-
-	if(headwind_wp.is_hwp_enabled())
-		mission_checker = new MissionCheck_HWP{mission,DataFlash,headwind_wp,_gcs};
-	else
-		mission_checker = new MissionCheck_STD{mission,DataFlash,_gcs};
-
-	bool successfull = mission_checker->check();
-
-	if(successfull)
-	{
-		mission_checker->init_mission();
-		return true;
-	}
-	else
-	{
-		// The stored mission is not ok. We build a default mission and then we notify the user
-		// The default mission contains
-		return false;
-	}
-
-}

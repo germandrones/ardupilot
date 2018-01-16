@@ -827,8 +827,12 @@ private:
     int32_t last_mixer_crc = -1;
 #endif // CONFIG_HAL_BOARD
     
+#ifdef HW_TEST
+
     void one_time_rewrite(void);
     void one_time_restore(void);
+
+#endif
 
     void adjust_nav_pitch_throttle(void);
     void update_load_factor(void);
