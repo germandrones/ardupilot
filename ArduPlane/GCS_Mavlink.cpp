@@ -170,6 +170,16 @@ void Plane::send_acknowledge_gdpilot(mavlink_channel_t chan)
 	mavlink_msg_ack_gdpilot_send(chan,1);
 }
 
+void Plane::send_hwp_message(mavlink_channel_t chan)
+{
+	AP_Mission::Mission_Command hwp1 = plane.headwind_wp.get_hwp1();
+	AP_Mission::Mission_Command hwp2 = plane.headwind_wp.get_hwp2();
+	AP_Mission::Mission_Command hwp3 = plane.headwind_wp.get_hwp3();
+
+
+	mavlink_msg_hwp_send(chan, hwp1.content.location.lat, hwp1.content.location.lng, hwp2.content.location.lat, hwp2.content.location.lng, hwp3.content.location.lat, hwp3.content.location.lng);
+}
+
 void Plane::send_location_neitzke(mavlink_channel_t chan)
 {
 
@@ -561,6 +571,7 @@ bool GCS_MAVLINK::is_message_nesesary_for_np(enum ap_message id)
 		case MSG_AOA_SSA:
 		case MSG_LANDING:
 		case MSG_NAMED_FLOAT:
+		case MSG_HWP:
 		case MSG_LAST:
 
 			return false;
@@ -622,6 +633,11 @@ bool GCS_MAVLINK_Plane::try_send_message(enum ap_message id)
 			break;
 		CHECK_PAYLOAD_SIZE(INITIAL_CHECK);
 		plane.send_acknowledge_gdpilot(chan);
+		break;
+
+	case MSG_HWP:
+		CHECK_PAYLOAD_SIZE(HWP);
+		plane.send_hwp_message(chan);
 		break;
 
 	case MSG_LOCATION_NEITZKE:
@@ -972,6 +988,8 @@ GCS_MAVLINK_Plane::data_stream_send(void)
 
     if (gcs().out_of_time()) return;
 
+
+
     if (stream_trigger(STREAM_EXTRA1)) {
         send_message(MSG_ATTITUDE);
         send_message(MSG_SIMSTATE);
@@ -982,6 +1000,11 @@ GCS_MAVLINK_Plane::data_stream_send(void)
             send_message(MSG_PID_TUNING);
         }
         send_message(MSG_LANDING);
+
+        if(plane.headwind_wp.hwp_status == HWP_GENERATED)
+        {
+        	send_message(MSG_HWP);
+        }
     }
 
     if (gcs().out_of_time()) return;

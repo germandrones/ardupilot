@@ -325,6 +325,8 @@ void AP_HeadWindLanding::generate_hw_waypoints(const AP_Mission::Mission_Command
 
 }
 
+
+
 void AP_HeadWindLanding::update_num_commands()
 {
     // num_cmd is updated with the total number of commands after adding the virtual waypoints
