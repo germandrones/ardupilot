@@ -75,7 +75,6 @@ void AP_HeadWindLanding::init_HWP(void)
     // reduce_speed = {};
 
     hwp_status = HWP_INITIALIZED;
-
 }
 
 void AP_HeadWindLanding::calc_index_landing_waypoint(void)

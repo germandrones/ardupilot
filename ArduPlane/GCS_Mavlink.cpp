@@ -176,8 +176,9 @@ void Plane::send_hwp_message(mavlink_channel_t chan)
 	AP_Mission::Mission_Command hwp2 = plane.headwind_wp.get_hwp2();
 	AP_Mission::Mission_Command hwp3 = plane.headwind_wp.get_hwp3();
 
-
 	mavlink_msg_hwp_send(chan, hwp1.content.location.lat, hwp1.content.location.lng, hwp2.content.location.lat, hwp2.content.location.lng, hwp3.content.location.lat, hwp3.content.location.lng);
+	plane.headwind_wp.is_hwp_sent = true;
+	//gcs().send_text(MAV_SEVERITY_NOTICE, "HWP is sent");
 }
 
 void Plane::send_location_neitzke(mavlink_channel_t chan)
@@ -1001,7 +1002,8 @@ GCS_MAVLINK_Plane::data_stream_send(void)
         }
         send_message(MSG_LANDING);
 
-        if(plane.headwind_wp.hwp_status == HWP_GENERATED)
+        // Send HWP Message if Generated and still not sent
+        if(plane.headwind_wp.hwp_status == HWP_GENERATED && plane.headwind_wp.is_hwp_sent == false)
         {
         	send_message(MSG_HWP);
         }

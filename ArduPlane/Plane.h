@@ -120,6 +120,7 @@
 #include <SITL/SITL.h>
 #endif
 
+
 /*
   a plane specific AP_AdvancedFailsafe class
  */

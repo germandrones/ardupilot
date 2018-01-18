@@ -107,6 +107,8 @@ public:
     // Status variables
     hwp_status_t hwp_status;
     hwp_error_status_t hwp_error;
+    bool is_hwp_sent = false;
+
 
 protected:
 
