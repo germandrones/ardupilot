@@ -22,6 +22,8 @@ void Plane::initial_checks()
 			arming.disarm();
 			AP_Notify::flags.armed = false;
 		}
+		// This is sent by GDPilot after the PixHawk sends the acknowledge
+		// to let the user mnow that everything is fine (the main led becomes solid blue)
 		else if(plane.gd_status.err_num == 100)
 		{
 			gcs().send_text(MAV_SEVERITY_CRITICAL, "GD: %s",plane.gd_status.err_msg);
