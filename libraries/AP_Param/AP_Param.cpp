@@ -33,6 +33,9 @@
 #include <StorageManager/StorageManager.h>
 #include <stdio.h>
 
+#include <crc32.h>
+
+
 extern const AP_HAL::HAL &hal;
 
 #define ENABLE_DEBUG 1
@@ -1953,6 +1956,47 @@ uint16_t AP_Param::count_parameters(void)
         _parameter_count = ret;
     }
     return ret;
+}
+
+/*
+    Return hash checksum of parameter list stored on Ardupilot
+*/
+uint32_t AP_Param::param_hash_check(void)
+{
+	int32_t param_hash = 0;
+
+    AP_Param  *vp;
+    AP_Param::ParamToken token;
+    enum ap_var_type ptype;
+    
+    int param_count = 0;
+
+    vp = AP_Param::first(&token, &ptype);
+    do{
+        char name[AP_MAX_NAME_SIZE+1];
+        vp->copy_name_token(token, &name[0], sizeof(name), true);
+
+        if(strstr(name, "STAT_") != nullptr 
+            || strstr(name, "SYS_NUM_RESETS") != nullptr
+            || strstr(name, "GND_ABS_PRESS") != nullptr)
+        {
+            continue;
+        } 
+
+        param_hash = crc32part((const uint8_t *)name, strlen(name), param_hash);
+
+        uint32_t value = (uint32_t)(vp->cast_to_float(ptype) * 100);
+        param_hash = crc32part((const uint8_t *)&value, type_size(ptype), param_hash);
+        
+        //gcs().send_text(MAV_SEVERITY_INFO, "%s - %d : %d", name ,param_count, value);
+
+        param_count++;
+        
+    }while (nullptr != (vp = AP_Param::next_scalar(&token, &ptype)));
+
+    // return absolute value of hash
+    param_hash = param_hash < 0 ? -param_hash : param_hash; 
+	return (uint32_t)param_hash;
 }
 
 /*
