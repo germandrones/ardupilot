@@ -232,6 +232,12 @@ void GCS_MAVLINK::handle_param_request_read(mavlink_message_t *msg)
     memcpy(req.param_name, packet.param_id, sizeof(req.param_name));
     req.param_name[AP_MAX_NAME_SIZE] = 0;
 
+    if (strncmp(req.param_name, "_HASH_CHECK", AP_MAX_NAME_SIZE+1) == 0) 
+    {
+        // send banner with firmware version on hash check!
+        send_banner();
+    }
+
     // queue it for processing by io timer
     param_requests.push(req);
 }
