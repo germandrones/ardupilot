@@ -2028,16 +2028,17 @@ void GCS_MAVLINK::send_banner()
 {
     // mark the firmware version in the tlog
     const AP_FWVersion &fwver = get_fwver();
-    send_text(MAV_SEVERITY_INFO, fwver.fw_string);
+    send_text(MAV_SEVERITY_INFO, "SongBird AP v.1.0.0 : (%s)", fwver.fw_hash_str);
 
-    if (fwver.middleware_hash_str && fwver.os_hash_str) {
-        send_text(MAV_SEVERITY_INFO, "PX4: %s NuttX: %s",
-                  fwver.middleware_hash_str, fwver.os_hash_str);
+    if (fwver.middleware_hash_str && fwver.os_hash_str) 
+    {
+        send_text(MAV_SEVERITY_INFO, "PX4: %s NuttX: %s", fwver.middleware_hash_str, fwver.os_hash_str);
     }
 
     // send system ID if we can
     char sysid[40];
-    if (hal.util->get_system_id(sysid)) {
+    if (hal.util->get_system_id(sysid)) 
+    { 
         send_text(MAV_SEVERITY_INFO, sysid);
     }
 }
