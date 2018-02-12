@@ -462,6 +462,7 @@ void AP_GPS::detect_instance(uint8_t instance)
     }
 
     if (_port[instance] == nullptr) {
+    	gcs().send_text(MAV_SEVERITY_INFO, "GPS_ERROR: UART NOT AVAILABLE");
         // UART not available
         return;
     }
@@ -485,6 +486,7 @@ void AP_GPS::detect_instance(uint8_t instance)
         break;
 
     default:
+    	gcs().send_text(MAV_SEVERITY_INFO, "GPS_ERROR: DEFAULT CASE REACHED");
         break;
     }
 
@@ -588,6 +590,7 @@ void AP_GPS::update_instance(uint8_t instance)
         return;
     }
     if (_type[instance] == GPS_TYPE_NONE) {
+    	gcs().send_text(MAV_SEVERITY_INFO, "GPS_ERROR: GPS NOT ENABLED");
         // not enabled
         state[instance].status = NO_GPS;
         state[instance].hdop = GPS_UNKNOWN_DOP;
@@ -596,12 +599,14 @@ void AP_GPS::update_instance(uint8_t instance)
     }
     if (locked_ports & (1U<<instance)) {
         // the port is locked by another driver
+    	gcs().send_text(MAV_SEVERITY_INFO, "GPS_ERROR: PORT LOCKED BY ANOTHER DRIVER");
         return;
     }
 
     if (drivers[instance] == nullptr || state[instance].status == NO_GPS) {
         // we don't yet know the GPS type of this one, or it has timed
         // out and needs to be re-initialised
+    	gcs().send_text(MAV_SEVERITY_INFO, "GPS_ERROR: UNKNOWN TYPE OR TIMEOUT");
         detect_instance(instance);
         return;
     }
@@ -619,6 +624,7 @@ void AP_GPS::update_instance(uint8_t instance)
     // detection to run again
     if (!result) {
         if (tnow - timing[instance].last_message_time_ms > GPS_TIMEOUT_MS) {
+        	gcs().send_text(MAV_SEVERITY_INFO, "GPS_ERROR: TIMEOUT REACHED");
             // free the driver before we run the next detection, so we
             // don't end up with two allocated at any time
             delete drivers[instance];
