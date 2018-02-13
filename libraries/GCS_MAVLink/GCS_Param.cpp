@@ -232,6 +232,12 @@ void GCS_MAVLINK::handle_param_request_read(mavlink_message_t *msg)
     memcpy(req.param_name, packet.param_id, sizeof(req.param_name));
     req.param_name[AP_MAX_NAME_SIZE] = 0;
 
+    if (strncmp(req.param_name, "_HASH_CHECK", AP_MAX_NAME_SIZE+1) == 0) 
+    {
+        // send banner with firmware version on hash check!
+        send_banner();
+    }
+
     // queue it for processing by io timer
     param_requests.push(req);
 }
@@ -402,6 +408,21 @@ void GCS_MAVLINK::param_io_timer(void)
         vp->copy_name_token(token, reply.param_name, AP_MAX_NAME_SIZE, true);
     } else {
         strncpy(reply.param_name, req.param_name, AP_MAX_NAME_SIZE+1);
+        
+        // handle "_HASH_CHECK" request, magic parameter
+        if (strncmp(req.param_name, "_HASH_CHECK", AP_MAX_NAME_SIZE+1) == 0) 
+        {
+            reply.chan = req.chan;
+            reply.param_name[AP_MAX_NAME_SIZE] = 0;
+            reply.value = (uint32_t)vp->param_hash_check();
+            reply.param_index = req.param_index;
+            reply.count = AP_Param::count_parameters();
+
+            // queue for transmission
+            param_replies.push(reply);
+            return;
+        }
+        
         vp = AP_Param::find(req.param_name, &reply.p_type);
         if (vp == nullptr) {
             return;
