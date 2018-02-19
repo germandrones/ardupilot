@@ -2089,6 +2089,17 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
         }
     	break;
 
+    // Special case for Mission items to see if we need to enable/disable the HWP feature
+    // after handling the current mission item
+    case MAVLINK_MSG_ID_MISSION_ITEM:
+    case MAVLINK_MSG_ID_MISSION_ITEM_INT:
+		handle_common_message(msg);
+		if(is_mission_uploaded())
+		{
+			// Check here if there is the MAV_CMD_HPW
+		}
+		break;
+
     default:
         handle_common_message(msg);
         break;
