@@ -68,25 +68,49 @@ bool MissionCheck_STD::is_landing_sequence_present()
 	if(is_landing_wp_present())
 	{
 		landing_point_found = true;
+		asprintf(&msg,"STD: LANDING POINT FOUND");
+		logInfo(msg);
 	}
 
-	// Search for loiter to altitude waypoint
-	int num_nav_commands_found = 0;
+	if(!landing_point_found)
+		return false;
+
+	// Search for loiter to altitude waypoint starting from the end of the mission
 	for(uint16_t i = num_items-1; i > 0; i--)
+	{
+		_mission.get_next_nav_cmd(i, cmd);
+
+		if(cmd.id == MAV_CMD_NAV_LOITER_TO_ALT)
+		{
+			loiter_to_altitude_found = true;
+			loiter_to_altitude_index = cmd.index;
+			asprintf(&msg,"STD: LTA CMD FOUND");
+			logInfo(msg);
+		}
+	}
+
+	if(!loiter_to_altitude_found)
+		return false;
+
+	// Count how many navigation waypoints between loter to altitude and land
+	int num_nav_commands_found = 0;
+	for(uint16_t i = loiter_to_altitude_index; i < get_index_landing_wp(); i++)
 	{
 		_mission.get_next_nav_cmd(i, cmd);
 
 		if(cmd.id == MAV_CMD_NAV_WAYPOINT)
 		{
-			num_nav_commands_found++;;
+			num_nav_commands_found++;
+			asprintf(&msg,"STD: FOUND WP BETWEEN LTA AND LAND WPs");
+			logInfo(msg);
 		}
 	}
 
-	if(num_nav_commands_found == 1)
-	{
-		wp_for_transition_found = true;
-	}
+	// For the moment we need to have at least one nav waypoint between the LTA and the landing
+	// loiter to altitude and the landing waypoint.
+	if(num_nav_commands_found == 0)
+		return false;
 
-	return landing_point_found && loiter_to_altitude_found && wp_for_transition_found;
+	return true;
 
 }

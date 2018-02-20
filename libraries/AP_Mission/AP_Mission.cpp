@@ -805,6 +805,10 @@ MAV_MISSION_RESULT AP_Mission::mavlink_int_to_mission_cmd(const mavlink_mission_
         cmd.content.set_yaw_speed.relative_angle = packet.param3;   // 0 = absolute angle, 1 = relative angle
         break;
 
+    case MAV_CMD_HWP:
+    	// TODO: Check what to do here
+    	break;
+
     default:
         // unrecognised command
         return MAV_MISSION_UNSUPPORTED;

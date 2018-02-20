@@ -39,9 +39,6 @@ bool MissionCheck_HWP::check()
 		logInfo(msg);
     }
     
-    asprintf(&msg,"Num Nav WP: %d",get_num_nav_wayponts());
-    logInfo(msg);
-    
     if(get_num_nav_wayponts() < 3)
     {
 		hwp_feature_usable = false;

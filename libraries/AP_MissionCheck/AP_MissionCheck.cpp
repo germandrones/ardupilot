@@ -36,7 +36,7 @@ void MissionCheck::inspect_stored_mission()
     	  index_takeoff_waypoint = cmd.index;
       }
       
-      if(cmd.id == MAV_CMD_NAV_LAND || cmd.id == MAV_CMD_LAND_AT_TAKEOFF)
+      if(cmd.id == MAV_CMD_NAV_LAND)
       {
     	  index_landing_waypoint = cmd.index;
       }
