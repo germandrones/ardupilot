@@ -52,3 +52,9 @@ bool MissionCheck_HWP::check()
     return hwp_feature_usable;
   
 }
+
+bool MissionCheck_HWP::is_landing_sequence_present()
+{
+	// Placeholder
+	return true;
+}

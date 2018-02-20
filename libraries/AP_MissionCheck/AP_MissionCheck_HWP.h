@@ -29,6 +29,8 @@ private:
     
     AP_HeadWindLanding&	_headwind_wp;
     bool                hwp_feature_usable;
+
+    bool is_landing_sequence_present();
   
 };
 

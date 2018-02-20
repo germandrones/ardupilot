@@ -14,6 +14,9 @@ MissionCheck::MissionCheck(AP_Mission& mission, DataFlash_Class &dataflash, GCS&
     landing_wp_present = false;
     num_nav_wayponts = 0;
     
+    index_takeoff_waypoint = -1;
+    index_landing_waypoint = -1;
+
     inspect_stored_mission();
 }
 
@@ -29,10 +32,14 @@ void MissionCheck::inspect_stored_mission()
       _mission.get_next_nav_cmd(i, cmd);
       
       if(cmd.id == MAV_CMD_NAV_TAKEOFF)
-    	  takeoff_wp_present = true;
+      {
+    	  index_takeoff_waypoint = cmd.index;
+      }
       
-      if(cmd.id == MAV_CMD_NAV_LAND)
-    	  landing_wp_present = true;
+      if(cmd.id == MAV_CMD_NAV_LAND || cmd.id == MAV_CMD_LAND_AT_TAKEOFF)
+      {
+    	  index_landing_waypoint = cmd.index;
+      }
       
       // I check if index is greater than 0 to avoid counting the home waypoint
       if(cmd.id == MAV_CMD_NAV_WAYPOINT && cmd.index > 0)
@@ -40,28 +47,6 @@ void MissionCheck::inspect_stored_mission()
      
   }
 
-}
-
-int16_t MissionCheck::get_index_landing_WP()
-{
-    // Get the number of commands for the current mission
-    int16_t num_cmd = _mission.num_commands();
-
-    // Stores the current cmd item
-    AP_Mission::Mission_Command current_cmd;
-
-    // Start iterating from the end of the mission
-    for(int16_t i=num_cmd-1; i>=0; i--)
-    {
-		_mission.get_next_nav_cmd(i, current_cmd);
-		// If the current command is a NAV command
-		if(current_cmd.id == MAV_CMD_NAV_LAND)
-			return current_cmd.index;
-    }
-
-    // If I ended the for loop and the return value is -1, it means that the current mission has no
-    // landing waypoints.
-    return -1;
 }
 
 int16_t MissionCheck::get_index_last_nav_WP()

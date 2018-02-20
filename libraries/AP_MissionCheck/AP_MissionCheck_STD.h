@@ -27,6 +27,7 @@ public:
 private:
     
     bool std_mission_usable;
+    bool is_landing_sequence_present();
   
 };
 

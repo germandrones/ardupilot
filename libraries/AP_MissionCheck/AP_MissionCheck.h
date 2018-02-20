@@ -25,8 +25,12 @@ public:
     // Inspect if a mission is loaded at startup. Returns true if we have a takeoff waypoint, a landing waypoint and at least two mission waypoints.
     void inspect_stored_mission();
     
-    bool is_takeoff_wp_present()    { return takeoff_wp_present; }
-    bool is_landing_wp_present()    { return landing_wp_present; }
+    bool is_takeoff_wp_present()    { return index_takeoff_waypoint > 0 ? true : false; }
+    bool is_landing_wp_present()    { return index_landing_waypoint > 0 ? true : false; }
+
+    uint16_t get_index_takeoff_wp()	{ return index_takeoff_waypoint; }
+    uint16_t get_index_landing_wp()	{ return index_landing_waypoint; }
+
     uint16_t get_num_nav_wayponts() { return num_nav_wayponts; }
     
     virtual bool check()             = 0;
@@ -49,15 +53,15 @@ protected:
     char* msg;
 
 private:
+
+    int16_t index_takeoff_waypoint;
+    int16_t index_landing_waypoint;
   
     /// get_index_last_nav_WP - returns the index of the last mission waypoint.
     int16_t get_index_last_nav_WP();
 
-    /// get_index_landing_WP - returns the index of the landing waypoint. The landing waypoint
-    /// should always be the last item. But this function is implemented in order to contemplate
-    /// the case where further actions are programmed after the landing and/or to make sure that
-    /// a landing waypoint is set.
-    int16_t get_index_landing_WP();
+    // Check the landing sequence according to which type mission is used
+    virtual bool is_landing_sequence_present() = 0;
 
 };
 
