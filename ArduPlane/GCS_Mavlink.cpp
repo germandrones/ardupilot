@@ -2089,15 +2089,29 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
         }
     	break;
 
-    // Special case for Mission items to see if we need to enable/disable the HWP feature
-    // after handling the current mission item
+    // Special case for mission items to see if we need to enable/disable the HWP feature
     case MAVLINK_MSG_ID_MISSION_ITEM:
     case MAVLINK_MSG_ID_MISSION_ITEM_INT:
 		handle_common_message(msg);
+
+		gcs().send_text(MAV_SEVERITY_NOTICE, "Looking for HWP disable command...");
+		// The following check is enabled only when the full mission has been uploaded
 		if(is_mission_uploaded())
 		{
-			// Check here if there is the MAV_CMD_HPW
+			int num_commands = plane.mission.num_commands();
+			for(int i = 0; i < num_commands; i++)
+			{
+				// If I found the command MAV_CMD_HWP the HWP feature is disabled and I have to check is the mission
+				// follows the rules of the default mission
+				if(plane.mission.get_command_id(i) == MAV_CMD_HWP)
+				{
+					plane.mission_checker = new MissionCheck_STD{plane.mission,plane.DataFlash,plane._gcs};
+					gcs().send_text(MAV_SEVERITY_NOTICE, "Found HWP disable command");
+					break;
+				}
+			}
 		}
+
 		break;
 
     default:

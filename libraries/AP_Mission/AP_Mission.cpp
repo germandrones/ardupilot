@@ -1442,6 +1442,15 @@ void AP_Mission::advance_current_do_cmd()
     }
 }
 
+/// get_command_id - gets the ID of the current command
+uint16_t AP_Mission::get_command_id(uint16_t index)
+{
+	Mission_Command temp_cmd;
+	get_next_cmd(index, temp_cmd, false);
+
+	return temp_cmd.id;
+}
+
 /// get_next_cmd - gets next command found at or after start_index
 ///     returns true if found, false if not found (i.e. mission complete)
 ///     accounts for do_jump commands
