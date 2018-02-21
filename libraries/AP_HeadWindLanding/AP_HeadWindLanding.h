@@ -77,7 +77,7 @@ public:
     void restore_mission();
 
     // Get methods
-    bool		is_hwp_enabled()			{ return hwp_enabled; }
+    bool		is_hwp_enabled()			{ return hwp_enabled && !hwp_mav_cmd_present; }
     AP_Float 	get_heading_wind()			{ return heading_wind; }
     AP_Float 	get_hwp_spd()				{ return hwp_spd; }
 
@@ -103,6 +103,8 @@ public:
 
     void		enable()					{ hwp_enabled = 1; }
     void		disable()					{ hwp_enabled = 0; }
+    void		temporarily_disable()		{ hwp_mav_cmd_present = 1; }
+    void 		temporarily_enable()        { hwp_mav_cmd_present = 0; }
 
     // Status variables
     hwp_status_t hwp_status;
@@ -113,6 +115,7 @@ public:
 protected:
 
     AP_Int8  hwp_enabled;
+    AP_Int8	 hwp_mav_cmd_present;
     AP_Int16 hwp_radius;
     AP_Float heading_wind;
     AP_Float hwp_spd;
@@ -126,7 +129,12 @@ protected:
 private:
 
     // Returns true if all the conditions for generating the HeadWind waypoints are met.
+    // all_conditions_satisfied() - returns true if all the conditions for generating the HeadWind waypoints are met.
     bool all_conditions_satisfied();
+
+    // is_disable_HWP_command_present() - returns true if the mission doesn't contains the MAV_CMD_DO_DISABLE_HWP
+    // for temporarily disable the mission
+    bool is_disable_HWP_command_present();
 
     typedef struct {
       // The following variable set the point in the mission where the virtual waypoints are generated.

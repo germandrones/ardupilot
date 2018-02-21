@@ -2106,9 +2106,9 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
 			{
 				// If I found the command MAV_CMD_HWP the HWP feature is disabled and I have to check is the mission
 				// follows the rules of the default mission
-				if(plane.mission.get_command_id(i) == MAV_CMD_HWP)
+				if(plane.mission.get_command_id(i) == MAV_CMD_DO_DISABLE_HWP)
 				{
-					plane.headwind_wp.disable();
+					plane.headwind_wp.temporarily_disable();
 					plane.mission_checker = new MissionCheck_STD{plane.mission,plane.DataFlash,plane._gcs};
 					gcs().send_text(MAV_SEVERITY_NOTICE, "Found HWP disable command");
 					break;

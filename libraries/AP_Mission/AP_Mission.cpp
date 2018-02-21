@@ -805,8 +805,9 @@ MAV_MISSION_RESULT AP_Mission::mavlink_int_to_mission_cmd(const mavlink_mission_
         cmd.content.set_yaw_speed.relative_angle = packet.param3;   // 0 = absolute angle, 1 = relative angle
         break;
 
-    case MAV_CMD_HWP:
+    case MAV_CMD_DO_DISABLE_HWP:
     	// TODO: Check what to do here
+    	cmd.p1 = packet.param1;
     	break;
 
     default:
@@ -1263,6 +1264,10 @@ bool AP_Mission::mission_cmd_to_mavlink_int(const AP_Mission::Mission_Command& c
         packet.param1 = cmd.content.set_yaw_speed.angle_deg;        // target angle in degrees
         packet.param2 = cmd.content.set_yaw_speed.speed;            // speed in meters/second
         packet.param3 = cmd.content.set_yaw_speed.relative_angle;   // 0 = absolute angle, 1 = relative angle
+        break;
+
+    case MAV_CMD_DO_DISABLE_HWP:
+     	packet.param1 = cmd.p1;
         break;
 
     default:

@@ -77,6 +77,24 @@ void AP_HeadWindLanding::init_HWP(void)
     hwp_status = HWP_INITIALIZED;
 }
 
+bool AP_HeadWindLanding::is_disable_HWP_command_present()
+{
+	  AP_Mission::Mission_Command cmd;
+
+	  uint16_t num_items = _mission.num_commands();
+
+	  for(uint16_t i = 0; i < num_items; i++)
+	  {
+	      _mission.get_next_nav_cmd(i, cmd);
+
+	      if(cmd.id == MAV_CMD_DO_DISABLE_HWP)
+	      {
+	    	  return false;
+	      }
+	  }
+	  return true;
+}
+
 void AP_HeadWindLanding::calc_index_landing_waypoint(void)
 {
 
