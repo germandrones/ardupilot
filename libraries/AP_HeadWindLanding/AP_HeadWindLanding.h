@@ -126,6 +126,13 @@ protected:
     AP_Float dist_hwpl_2;
     AP_Float dist_hwpl_3;
 
+    // The following two variables describes the beginning and the end of the forbidden area where the HWP
+    // cannot be generated. The areas is described as the sector of the circle centered in the landing point.
+    // The begin_forbidden_area and end_forbidden_area variables represent the angles from the North axis
+    // using the NED frame.
+    AP_Int16 begin_forbidden_area;
+    AP_Int16 end_forbidden_area;
+
 private:
 
     // Returns true if all the conditions for generating the HeadWind waypoints are met.

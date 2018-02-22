@@ -2101,6 +2101,10 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
 
 			// By default, PixHawk is supposed to check the mission with the HWP feature enabled
 			plane.mission_checker = new MissionCheck_HWP{plane.mission,plane.DataFlash,plane.headwind_wp,plane._gcs};
+			if(!plane.headwind_wp.is_hwp_enabled())
+			{
+				plane.headwind_wp.temporarily_enable();
+			}
 
 			for(int i = 0; i < num_commands; i++)
 			{
