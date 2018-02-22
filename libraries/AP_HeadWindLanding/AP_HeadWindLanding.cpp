@@ -43,6 +43,15 @@ const AP_Param::GroupInfo AP_HeadWindLanding::var_info[] = {
     // @Increment: 1
     AP_GROUPINFO("LRADIUS", 3, AP_HeadWindLanding, loiter_radius, 60),
 
+    // @Param: DIRECTION
+    // @DisplayName:
+    // @Description: Direction from which the UAV should approach the landing point. By default is 0 degrees (against the wind direction).
+    // @User: Standard
+    // @Units: degrees
+    // @Range: 0 360
+    // @Increment: 1
+    AP_GROUPINFO("DIRECTION", 4, AP_HeadWindLanding, heading_wind, 0),
+
     AP_GROUPEND
 
 };
@@ -64,10 +73,17 @@ void AP_HeadWindLanding::init_HWP(void)
     idx_last_mission_wp = -1;
     idx_hwp = 0;
 
+    begin_forbidden_area = 0;
+    end_forbidden_area = 0;
+
+    is_forbidden_area_set = false;
+
     // I calculate all the indexes
     calc_index_landing_waypoint();
     calc_index_last_mission_waypoint();
     calc_index_hw_waypoints();
+
+    check_forbidden_area_defined();
 
     hwp1 = {};
     hwp2 = {};
@@ -93,6 +109,27 @@ bool AP_HeadWindLanding::is_disable_HWP_command_present()
 	      }
 	  }
 	  return true;
+}
+
+void AP_HeadWindLanding::check_forbidden_area_defined(void)
+{
+    // Command item used for iterating through the mission
+    AP_Mission::Mission_Command current_cmd;
+
+    // Start iterating from the end of the mission
+    for(int16_t i=num_cmd-1; i>=0; i--)
+    {
+		_mission.get_next_nav_cmd(i, current_cmd);
+
+		if(current_cmd.id == MAV_CMD_SET_FORBIDDEN_ZONE)
+		{
+			is_forbidden_area_set = true;
+			begin_forbidden_area = current_cmd.content.forbidden_zone.begin_area_sector;
+			end_forbidden_area = current_cmd.content.forbidden_zone.end_area_sector;
+			return;
+		}
+    }
+
 }
 
 void AP_HeadWindLanding::calc_index_landing_waypoint(void)
@@ -251,30 +288,33 @@ void AP_HeadWindLanding::generate_hw_waypoints(const AP_Mission::Mission_Command
 		_ahrs.get_NavEKF2().getWind(0,wind);
 
 		float modWind = sqrt(wind.x*wind.x+wind.y*wind.y);
-		gcs().send_text(MAV_SEVERITY_NOTICE, "WIND_SPD:%f",modWind);
+		// gcs().send_text(MAV_SEVERITY_NOTICE, "WIND_SPD:%f",modWind);
 		// -------------------------------------------------------------------------------
 
 		// Default distance of VWP when there is no wind
 		// Direction of the Wind (rad)
 		float thetaWind = 0.0f;
-		float new_theta_hwp = 0.0f;
+		float theta_hwp = 0.0f;
 
 		// WindX is the component of the wind along North Axis. WindY is the component of the wind along East Axis.
 		thetaWind = atan2(wind.y,wind.x);
-		// New theta is the wind direction
-		new_theta_hwp = thetaWind + heading_wind*DEG_TO_RAD;
+		// New theta is the angle from north along which the HWP will be generated
+
+		// TODO: rename wp to land_wp
+		theta_hwp = calc_theta_hwp(thetaWind,last_mwp,wp);
+
 		// GCS_SEND_MSG("WIND_DIR:%f",thetaWind*180.0f/3.1415f);
 
-		// Calculate the coordinates of the first virtual waypoint -----------------------
-		loc_hwp1.lat = land_wp.lat + dist_hwpl_1*cos(new_theta_hwp) / mdlat * 10000000.0f;
-		loc_hwp1.lng = land_wp.lng + dist_hwpl_1*sin(new_theta_hwp) / mdlng * 10000000.0f;
+		// Calculate the coordinates of the first heading wind waypoint -----------------------
+		loc_hwp1.lat = land_wp.lat + dist_hwpl_1*cos(theta_hwp) / mdlat * 10000000.0f;
+		loc_hwp1.lng = land_wp.lng + dist_hwpl_1*sin(theta_hwp) / mdlng * 10000000.0f;
 		// The altitude is the same as the altitude of the last waypoint mission
 		loc_hwp1.alt = land_wp.alt;
 		loc_hwp1.options = 1<<0; // Relative altitude
 
-		// Calculate the coordinates of the second virtual waypoint ----------------------
-		loc_hwp2.lat = land_wp.lat + dist_hwpl_2*cos(new_theta_hwp) / mdlat * 10000000.0f;
-		loc_hwp2.lng = land_wp.lng + dist_hwpl_2*sin(new_theta_hwp) / mdlng * 10000000.0f;
+		// Calculate the coordinates of the second heading waypoint ----------------------
+		loc_hwp2.lat = land_wp.lat + dist_hwpl_2*cos(theta_hwp) / mdlat * 10000000.0f;
+		loc_hwp2.lng = land_wp.lng + dist_hwpl_2*sin(theta_hwp) / mdlng * 10000000.0f;
 		// The altitude is the same as the altitude of the last waypoint mission
 		loc_hwp2.alt = land_wp.alt;
 		loc_hwp2.options = 1<<0;
@@ -286,8 +326,8 @@ void AP_HeadWindLanding::generate_hw_waypoints(const AP_Mission::Mission_Command
 		float reduced_speed = hwp_spd; //current_speed*80.0f/100.0f;
 
 		// Calculate the coordinates of the third virtual waypoint -----------------------
-		loc_hwp3.lat = land_wp.lat + dist_hwpl_3*cos(new_theta_hwp) / mdlat * 10000000.0f;
-		loc_hwp3.lng = land_wp.lng + dist_hwpl_3*sin(new_theta_hwp) / mdlng * 10000000.0f;
+		loc_hwp3.lat = land_wp.lat + dist_hwpl_3*cos(theta_hwp) / mdlat * 10000000.0f;
+		loc_hwp3.lng = land_wp.lng + dist_hwpl_3*sin(theta_hwp) / mdlng * 10000000.0f;
 		// The altitude is the same as the altitude of the last waypoint mission
 		loc_hwp3.alt = land_wp.alt;
 		loc_hwp3.flags.relative_alt = 1;
@@ -342,13 +382,82 @@ void AP_HeadWindLanding::generate_hw_waypoints(const AP_Mission::Mission_Command
 
 }
 
-
-
 void AP_HeadWindLanding::update_num_commands()
 {
     // num_cmd is updated with the total number of commands after adding the virtual waypoints
     if(hwp_status > HWP_INITIALIZED)
 	num_cmd = _mission.num_commands();
+}
+
+float AP_HeadWindLanding::calc_theta_hwp(float theta_wind, AP_Mission::Mission_Command &last_mwp, AP_Mission::Mission_Command &land_wp)
+{
+	// If we didn't set-up a forbidden area around the landing point
+	// I will generate the HWP 180 degrees against the wind direction.
+	if(!is_forbidden_area_set)
+	{
+		return theta_wind;
+	}
+	// The forbidden area is set. Check if we wind blow towards the forbidden area.
+	else
+	{
+		// The actual forbidden area is bigger than the one configured on mission planner
+		// since we need to consider that also the radius of the loitering to altitude cannot cross this area
+
+		float extra_area = sector_dimension_from_chord(hwp_radius,loiter_radius);
+		float begin_ext_forbidden_area = begin_forbidden_area - extra_area;
+	    float end_ext_forbidden_area   = end_forbidden_area + extra_area;
+
+		if(theta_wind > begin_ext_forbidden_area && theta_wind < end_ext_forbidden_area)
+		{
+			// Check if the last mission waypoint is on the left or the right of this zone
+			// First I split the green zone in parts, then I add 180 degrees to check if the last mission
+			// waypoint belongs to the left sector or the right sector
+			float divider = (end_ext_forbidden_area - end_ext_forbidden_area)*2.0 + M_PI;
+
+			// Get the coordinates of the last mission wapyoint and the landing waypoint in meters
+			float cx = METERS_PER_DEG_LNG(land_wp.content.location.lng*TO_DEG_FORMAT);
+			float cy = METERS_PER_DEG_LAT(land_wp.content.location.lat*TO_DEG_FORMAT);
+			float px = METERS_PER_DEG_LNG(last_mwp.content.location.lng*TO_DEG_FORMAT);
+			float py = METERS_PER_DEG_LAT(last_mwp.content.location.lat*TO_DEG_FORMAT);
+
+			// If the following function returns true, then we are on the left sector of the green zone
+			if(is_point_inside_sector(hwp_radius,cx,cy,px,py,begin_ext_forbidden_area,begin_ext_forbidden_area-divider))
+			{
+				return begin_ext_forbidden_area;
+			}
+			// If it returns false we are on the right sector of the green zone
+			else
+			{
+				return end_ext_forbidden_area;
+			}
+
+		}
+		// If the forbidden area is set but we are outside, then everything is fine
+		else
+			return theta_wind;
+	}
+}
+
+bool AP_HeadWindLanding::is_point_inside_sector(int radius, float cx, float cy, float px, float py, float start_angle, float end_angle)
+{
+	// x axis is longitude
+	// y axis is latitude
+
+	float _px = px - cx;
+	float _py = py - cy;
+
+    float _radius_polar = (float)sqrt(_px*_px+_py*_py);
+    float _angle_polar = atan(_py/_px);
+
+    if (_angle_polar>=start_angle && _angle_polar<=end_angle && _radius_polar<radius)
+        return true;
+    else
+        return false;
+}
+
+float AP_HeadWindLanding::sector_dimension_from_chord(float radius, float chord)
+{
+	return 2.0*asin(chord/(4.0*radius));
 }
 
 void AP_HeadWindLanding::restore_mission()

@@ -170,6 +170,12 @@ public:
         int8_t sec_utc; // absolute time's sec (utc)
     };
 
+    // Structure for defining the area where the the HWP cannot be generated
+    struct PACKED ForbiddenZone {
+        int16_t begin_area_sector;
+        int16_t end_area_sector;
+    };
+
     // DO_ENGINE_CONTROL support
     struct PACKED Do_Engine_Control {
         bool start_control; // start or stop engine
@@ -247,6 +253,9 @@ public:
 
         // location
         Location location;      // Waypoint location
+
+        // Area where the HWP cannot be defined
+        ForbiddenZone forbidden_zone;
 
         // raw bytes, for reading/writing to eeprom. Note that only 10 bytes are available
         // if a 16 bit command ID is used

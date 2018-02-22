@@ -810,6 +810,11 @@ MAV_MISSION_RESULT AP_Mission::mavlink_int_to_mission_cmd(const mavlink_mission_
     	cmd.p1 = packet.param1;
     	break;
 
+    case MAV_CMD_SET_FORBIDDEN_ZONE:
+    	cmd.content.forbidden_zone.begin_area_sector = packet.param1;
+    	cmd.content.forbidden_zone.end_area_sector = packet.param2;
+    break;
+
     default:
         // unrecognised command
         return MAV_MISSION_UNSUPPORTED;
@@ -1269,6 +1274,11 @@ bool AP_Mission::mission_cmd_to_mavlink_int(const AP_Mission::Mission_Command& c
     case MAV_CMD_DO_DISABLE_HWP:
      	packet.param1 = cmd.p1;
         break;
+
+    case MAV_CMD_SET_FORBIDDEN_ZONE:
+		packet.param1 = cmd.content.forbidden_zone.begin_area_sector;
+		packet.param2 = cmd.content.forbidden_zone.end_area_sector;
+		break;
 
     default:
         // unrecognised command
