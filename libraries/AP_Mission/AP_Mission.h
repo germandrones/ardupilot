@@ -173,7 +173,7 @@ public:
     // Structure for defining the area where the the HWP cannot be generated
     struct PACKED ForbiddenZone {
         int16_t begin_area_sector;
-        int16_t end_area_sector;
+        int16_t offset;
     };
 
     // DO_ENGINE_CONTROL support

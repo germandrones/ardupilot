@@ -73,17 +73,17 @@ void AP_HeadWindLanding::init_HWP(void)
     idx_last_mission_wp = -1;
     idx_hwp = 0;
 
-    begin_forbidden_area = 0;
-    end_forbidden_area = 0;
+    begin_no_landing_area = 0.0f;
+    end_no_landing_area = 0.0f;
 
-    is_forbidden_area_set = false;
+    is_no_landing_area_set = false;
 
     // I calculate all the indexes
     calc_index_landing_waypoint();
     calc_index_last_mission_waypoint();
     calc_index_hw_waypoints();
 
-    check_forbidden_area_defined();
+    check_no_landing_area_defined();
 
     hwp1 = {};
     hwp2 = {};
@@ -111,7 +111,7 @@ bool AP_HeadWindLanding::is_disable_HWP_command_present()
 	  return true;
 }
 
-void AP_HeadWindLanding::check_forbidden_area_defined(void)
+void AP_HeadWindLanding::check_no_landing_area_defined(void)
 {
     // Command item used for iterating through the mission
     AP_Mission::Mission_Command current_cmd;
@@ -123,9 +123,14 @@ void AP_HeadWindLanding::check_forbidden_area_defined(void)
 
 		if(current_cmd.id == MAV_CMD_SET_FORBIDDEN_ZONE)
 		{
-			is_forbidden_area_set = true;
-			begin_forbidden_area = current_cmd.content.forbidden_zone.begin_area_sector;
-			end_forbidden_area = current_cmd.content.forbidden_zone.end_area_sector;
+			is_no_landing_area_set = true;
+			begin_no_landing_area = current_cmd.content.forbidden_zone.begin_area_sector;
+			end_no_landing_area = begin_no_landing_area + current_cmd.content.forbidden_zone.offset;
+
+			if(end_no_landing_area < 360.0)
+				end_no_landing_area += 360.0;
+			if(end_no_landing_area > 360.0)
+				end_no_landing_area -= 360.0;
 			return;
 		}
     }
@@ -297,24 +302,27 @@ void AP_HeadWindLanding::generate_hw_waypoints(const AP_Mission::Mission_Command
 		float theta_hwp = 0.0f;
 
 		// WindX is the component of the wind along North Axis. WindY is the component of the wind along East Axis.
-		thetaWind = atan2(wind.y,wind.x);
+		thetaWind = atan2(wind.y,wind.x)*180.0/M_PI;
+
 		// New theta is the angle from north along which the HWP will be generated
 
 		// TODO: rename wp to land_wp
 		theta_hwp = calc_theta_hwp(thetaWind,last_mwp,wp);
 
+		float theta_hwp_rad = theta_hwp*M_PI/180.0f;
+
 		// GCS_SEND_MSG("WIND_DIR:%f",thetaWind*180.0f/3.1415f);
 
 		// Calculate the coordinates of the first heading wind waypoint -----------------------
-		loc_hwp1.lat = land_wp.lat + dist_hwpl_1*cos(theta_hwp) / mdlat * 10000000.0f;
-		loc_hwp1.lng = land_wp.lng + dist_hwpl_1*sin(theta_hwp) / mdlng * 10000000.0f;
+		loc_hwp1.lat = land_wp.lat + dist_hwpl_1*cos(theta_hwp_rad) / mdlat * 10000000.0f;
+		loc_hwp1.lng = land_wp.lng + dist_hwpl_1*sin(theta_hwp_rad) / mdlng * 10000000.0f;
 		// The altitude is the same as the altitude of the last waypoint mission
 		loc_hwp1.alt = land_wp.alt;
 		loc_hwp1.options = 1<<0; // Relative altitude
 
 		// Calculate the coordinates of the second heading waypoint ----------------------
-		loc_hwp2.lat = land_wp.lat + dist_hwpl_2*cos(theta_hwp) / mdlat * 10000000.0f;
-		loc_hwp2.lng = land_wp.lng + dist_hwpl_2*sin(theta_hwp) / mdlng * 10000000.0f;
+		loc_hwp2.lat = land_wp.lat + dist_hwpl_2*cos(theta_hwp_rad) / mdlat * 10000000.0f;
+		loc_hwp2.lng = land_wp.lng + dist_hwpl_2*sin(theta_hwp_rad) / mdlng * 10000000.0f;
 		// The altitude is the same as the altitude of the last waypoint mission
 		loc_hwp2.alt = land_wp.alt;
 		loc_hwp2.options = 1<<0;
@@ -326,8 +334,8 @@ void AP_HeadWindLanding::generate_hw_waypoints(const AP_Mission::Mission_Command
 		float reduced_speed = hwp_spd; //current_speed*80.0f/100.0f;
 
 		// Calculate the coordinates of the third virtual waypoint -----------------------
-		loc_hwp3.lat = land_wp.lat + dist_hwpl_3*cos(theta_hwp) / mdlat * 10000000.0f;
-		loc_hwp3.lng = land_wp.lng + dist_hwpl_3*sin(theta_hwp) / mdlng * 10000000.0f;
+		loc_hwp3.lat = land_wp.lat + dist_hwpl_3*cos(theta_hwp_rad) / mdlat * 10000000.0f;
+		loc_hwp3.lng = land_wp.lng + dist_hwpl_3*sin(theta_hwp_rad) / mdlng * 10000000.0f;
 		// The altitude is the same as the altitude of the last waypoint mission
 		loc_hwp3.alt = land_wp.alt;
 		loc_hwp3.flags.relative_alt = 1;
@@ -391,68 +399,67 @@ void AP_HeadWindLanding::update_num_commands()
 
 float AP_HeadWindLanding::calc_theta_hwp(float theta_wind, AP_Mission::Mission_Command &last_mwp, AP_Mission::Mission_Command &land_wp)
 {
-	// If we didn't set-up a forbidden area around the landing point
+	// If we didn't set-up a no landing area around the landing point
 	// I will generate the HWP 180 degrees against the wind direction.
-	if(!is_forbidden_area_set)
+	if(!is_no_landing_area_set)
 	{
 		return theta_wind;
 	}
-	// The forbidden area is set. Check if we wind blow towards the forbidden area.
+	// The no landing area is set. Check if the wind blows towards the no landing area.
 	else
 	{
-		// The actual forbidden area is bigger than the one configured on mission planner
+
+		// The actual no landing area is bigger than the one configured on mission planner
 		// since we need to consider that also the radius of the loitering to altitude cannot cross this area
 
-		float extra_area = sector_dimension_from_chord(hwp_radius,loiter_radius);
-		float begin_ext_forbidden_area = begin_forbidden_area - extra_area;
-	    float end_ext_forbidden_area   = end_forbidden_area + extra_area;
+		// gcs().send_text(MAV_SEVERITY_NOTICE, "3. begin/end initial %f %f",begin_no_landing_area,end_no_landing_area);
 
-		if(theta_wind > begin_ext_forbidden_area && theta_wind < end_ext_forbidden_area)
+		float extra_area = sector_dimension_from_chord(hwp_radius,loiter_radius)*180.0/M_PI;
+
+		float begin_ext_no_landing_area = begin_no_landing_area - extra_area;
+		float end_ext_no_landing_area = end_no_landing_area + extra_area;
+
+		if(is_angle_between(begin_ext_no_landing_area,end_ext_no_landing_area,theta_wind))
 		{
-			// Check if the last mission waypoint is on the left or the right of this zone
-			// First I split the green zone in parts, then I add 180 degrees to check if the last mission
-			// waypoint belongs to the left sector or the right sector
-			float divider = (end_ext_forbidden_area - end_ext_forbidden_area)*2.0 + M_PI;
 
-			// Get the coordinates of the last mission wapyoint and the landing waypoint in meters
-			float cx = METERS_PER_DEG_LNG(land_wp.content.location.lng*TO_DEG_FORMAT);
-			float cy = METERS_PER_DEG_LAT(land_wp.content.location.lat*TO_DEG_FORMAT);
-			float px = METERS_PER_DEG_LNG(last_mwp.content.location.lng*TO_DEG_FORMAT);
-			float py = METERS_PER_DEG_LAT(last_mwp.content.location.lat*TO_DEG_FORMAT);
+			// TO DO: Implement this: https://math.stackexchange.com/questions/1766285/is-there-a-formula-that-finds-middle-between-two-angles
+			float theta_between = begin_ext_no_landing_area + (end_ext_no_landing_area-begin_ext_no_landing_area)/2.0; //    atan2(x2-x1,y2-y1)*180.0/M_PI;  // # atan2(y, x) or atan2(sin, cos)
+			float divider = theta_between + 180.0f;
 
-			// If the following function returns true, then we are on the left sector of the green zone
-			if(is_point_inside_sector(hwp_radius,cx,cy,px,py,begin_ext_forbidden_area,begin_ext_forbidden_area-divider))
-			{
-				return begin_ext_forbidden_area;
-			}
-			// If it returns false we are on the right sector of the green zone
-			else
-			{
-				return end_ext_forbidden_area;
-			}
+			// Is the wind vector closer to the begin or the end of the non landing zone?
+
+			float diff_begin = fabs(difference_between_angles(theta_wind,begin_ext_no_landing_area));
+			float diff_end = fabs(difference_between_angles(theta_wind,end_ext_no_landing_area));
+
+			// gcs().send_text(MAV_SEVERITY_CRITICAL, "diff: %f, %f, %f, %f",theta_between,divider,diff_begin,diff_end);
+
+			return diff_begin < diff_end ? begin_ext_no_landing_area : end_ext_no_landing_area;
 
 		}
-		// If the forbidden area is set but we are outside, then everything is fine
+		// If the no landing area is set but we are outside, then everything is fine
 		else
+		{
+			// gcs().send_text(MAV_SEVERITY_NOTICE, "20. Outside the no landing area");
 			return theta_wind;
+		}
 	}
 }
 
-bool AP_HeadWindLanding::is_point_inside_sector(int radius, float cx, float cy, float px, float py, float start_angle, float end_angle)
+// https://www.codeproject.com/Articles/59789/Calculate-the-real-difference-between-two-angles-k
+float AP_HeadWindLanding::difference_between_angles(float first, float second)
 {
-	// x axis is longitude
-	// y axis is latitude
+    float difference = second - first;
+    if (difference < -180) difference += 360;
+    if (difference > 180) difference -= 360;
+    return difference;
+}
 
-	float _px = px - cx;
-	float _py = py - cy;
-
-    float _radius_polar = (float)sqrt(_px*_px+_py*_py);
-    float _angle_polar = atan(_py/_px);
-
-    if (_angle_polar>=start_angle && _angle_polar<=end_angle && _radius_polar<radius)
-        return true;
-    else
-        return false;
+// https://math.stackexchange.com/questions/1044905/simple-angle-between-two-angles-of-circle
+bool AP_HeadWindLanding::is_angle_between(float start, float end, float mid)
+{
+    end = (end - start) < 0.0f ? end - start + 360.0f : end - start;
+    mid = (mid - start) < 0.0f ? mid - start + 360.0f : mid - start;
+    return (mid < end);
 }
 
 float AP_HeadWindLanding::sector_dimension_from_chord(float radius, float chord)

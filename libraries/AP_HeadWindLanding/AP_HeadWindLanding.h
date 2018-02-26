@@ -130,9 +130,10 @@ protected:
     // cannot be generated. The areas is described as the sector of the circle centered in the landing point.
     // The begin_forbidden_area and end_forbidden_area variables represent the angles from the North axis
     // using the NED frame.
-    bool is_forbidden_area_set;
-    AP_Int16 begin_forbidden_area;
-    AP_Int16 end_forbidden_area;
+    bool is_no_landing_area_set;
+    float begin_no_landing_area;
+    float offset_no_landing_area;
+    float end_no_landing_area;
 
 private:
 
@@ -144,15 +145,17 @@ private:
     // for temporarily disable the mission
     bool is_disable_HWP_command_present();
 
-    // check_forbidden_area - check if the user set a forbidden area where the HWP should not be generated
-    void check_forbidden_area_defined(void);
+    // check_forbidden_area - checks if the user set a forbidden area where the HWP should not be generated
+    void check_no_landing_area_defined(void);
 
-    // is_point_inside_sector() - check if a points belongs to a sector of a circle (this function uses polar coordinates)
-    bool is_point_inside_sector(int radius, float cx, float cy, float px, float py, float start_angle, float end_angle);
-
-    // sector_dimension_from_chord() - return the size of the circular sector specifying the radius of the circle
+    // sector_dimension_from_chord() - returns the size of the circular sector specifying the radius of the circle
     // and the lenght of the chord.
     float sector_dimension_from_chord(float radius, float chord);
+
+    // is_angle_between() - checks if an angle is between two angles
+    bool is_angle_between(float start, float end, float mid);
+
+    float difference_between_angles(float first, float second);
 
     // calc_theta_hwp() - calculates the direction of the HWP based on the forbidden zone
     float calc_theta_hwp(float theta_wind, AP_Mission::Mission_Command &last_mwp, AP_Mission::Mission_Command &land_wp);
