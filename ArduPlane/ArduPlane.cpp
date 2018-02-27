@@ -347,7 +347,7 @@ void Plane::one_second_loop()
 		one_sec_cnt += 1;
 
 		// After 60 seconds from the startup, the virtual waypoints will be added
-		if(one_sec_cnt > 60 && !mission_rewrote)
+		if(one_sec_cnt > 40 && !mission_rewrote)
 		{
 			gcs().send_text(MAV_SEVERITY_NOTICE, "Calling Mission Rewrite function");
 			one_time_rewrite();
@@ -355,7 +355,7 @@ void Plane::one_second_loop()
 		}
 
 		// The following section is used for restoring the original mission
-		if(one_sec_cnt > 120 && !mission_restored)
+		if(one_sec_cnt > 80 && !mission_restored)
 		{
 			gcs().send_text(MAV_SEVERITY_NOTICE, "Calling Mission Restore function");
 			one_time_restore();

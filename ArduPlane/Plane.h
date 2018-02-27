@@ -120,6 +120,8 @@
 #include <SITL/SITL.h>
 #endif
 
+#define HW_TEST 1
+
 /*
   a plane specific AP_AdvancedFailsafe class
  */
