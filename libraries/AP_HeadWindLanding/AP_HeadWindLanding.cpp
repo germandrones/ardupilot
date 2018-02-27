@@ -221,7 +221,7 @@ bool AP_HeadWindLanding::all_conditions_satisfied()
 }
 
 // This function generates the virtual waypoints to attach at the end of mission, right before the landing waypoint
-void AP_HeadWindLanding::generate_hw_waypoints(const AP_Mission::Mission_Command& cmd)
+void AP_HeadWindLanding::generate_hw_waypoints(const MC& cmd)
 {
 
     // Check if the current cmd is where I should generate the virtual waypoints and there are no errors
@@ -296,6 +296,8 @@ void AP_HeadWindLanding::generate_hw_waypoints(const AP_Mission::Mission_Command
 		// WindX is the component of the wind along North Axis. WindY is the component of the wind along East Axis.
 		thetaWind = atan2(wind.y,wind.x)*180.0/M_PI;
 
+		// thetaWind = 90.0f;
+
 		// New theta is the angle from north along which the HWP will be generated
 
 		// TODO: rename wp to land_wp
@@ -323,7 +325,7 @@ void AP_HeadWindLanding::generate_hw_waypoints(const AP_Mission::Mission_Command
 		// vwp2_spd.speed_type = 0;
 		// The target speed is set as 80% of the current speed
 		// float current_speed = ahrs.getLastGNDSpeed();
-		float reduced_speed = hwp_spd; //current_speed*80.0f/100.0f;
+		float reduced_speed = hwp_spd;
 
 		// Calculate the coordinates of the third virtual waypoint -----------------------
 		loc_hwp3.lat = land_wp.lat + dist_hwpl_3*cos(theta_hwp_rad) / mdlat * 10000000.0f;
@@ -349,8 +351,6 @@ void AP_HeadWindLanding::generate_hw_waypoints(const AP_Mission::Mission_Command
 
 		hwp3.p1 = (uint16_t)loiter_radius;
 
-		// Add the new command to the mission
-
 		hwp2 = last_mwp;
 		hwp2.id = MAV_CMD_NAV_WAYPOINT;
 		hwp2.content.location = loc_hwp2;
@@ -362,6 +362,11 @@ void AP_HeadWindLanding::generate_hw_waypoints(const AP_Mission::Mission_Command
 		hwp1 = last_mwp;
 		hwp1.id = MAV_CMD_NAV_WAYPOINT;
 		hwp1.content.location = loc_hwp1;
+
+		// Before adding the HWP waypoints to the mission, we need to check if the segment connecting the last mission waypoint
+		// and the farthest HWP waypoint (LTA) intersect the no landing zone. If yes, we need to add one more waypoint. This fourth
+		// waypoint is a mirror of the last mission waypoint w.r.t to the landing waypoint.
+		// TODO: Finish implementation
 
 		if(hwp_enabled)
 		{
@@ -389,7 +394,49 @@ void AP_HeadWindLanding::update_num_commands()
 	num_cmd = _mission.num_commands();
 }
 
-float AP_HeadWindLanding::calc_theta_hwp(float theta_wind, AP_Mission::Mission_Command &last_mwp, AP_Mission::Mission_Command &land_wp)
+bool AP_HeadWindLanding::check_crossing_no_landing_zone(MC &last_mwp, MC &land_wp, MC &lta_wp, float begin_area, float end_area)
+{
+	// Segment connecting the last mission waypoint and the loiter to altitude waypoint
+	Vector2l LMWP(last_mwp.content.location.lat,last_mwp.content.location.lng);
+	Vector2l LTA(lta_wp.content.location.lat,lta_wp.content.location.lng);
+
+	// Semi-line starting from the landing waypoint and going through the left border of the no landing area (beginning of the no landing area)
+	int32_t B_LAT = hwp_radius * cos(begin_area*M_PI/180.0);
+	int32_t B_LNG = hwp_radius * sin(begin_area*M_PI/180.0);
+
+	Vector2l BEGIN_NO_LANDING_AREA(B_LAT,B_LNG);
+	Vector2l LANDWP(land_wp.content.location.lat,land_wp.content.location.lng);
+
+	// Semi-line starting from the landing waypoint and going through the right border of the no landing area (end of the no landing area)
+	int32_t E_LAT = hwp_radius * cos(begin_area*M_PI/180.0);
+	int32_t E_LNG = hwp_radius * sin(begin_area*M_PI/180.0);
+
+	Vector2l END_NO_LANDING_AREA(E_LAT,E_LNG);
+
+	return true;
+}
+
+// http://ptspts.blogspot.de/2010/06/how-to-determine-if-two-line-segments.html
+// https://www.geeksforgeeks.org/check-if-two-given-line-segments-intersect/
+bool AP_HeadWindLanding::IsOnSegment(double xi, double yi, double xj, double yj, double xk, double yk)
+{
+	return (xi <= xk || xj <= xk) && (xk <= xi || xk <= xj) && (yi <= yk || yj <= yk) && (yk <= yi || yk <= yj);
+}
+
+char AP_HeadWindLanding::ComputeDirection(double xi, double yi, double xj, double yj, double xk, double yk)
+{
+	double a = (xk - xi) * (yj - yi);
+	double b = (xj - xi) * (yk - yi);
+	return a < b ? -1 : a > b ? 1 : 0;
+}
+
+bool AP_HeadWindLanding::DoLineSegmentsIntersect(double x1, double y1, double x2, double y2, double x3, double y3, double x4, double y4)
+{
+	// Not yet implemented
+	return false;
+}
+
+float AP_HeadWindLanding::calc_theta_hwp(float theta_wind, MC &last_mwp, MC &land_wp)
 {
 	// If we didn't set-up a no landing area around the landing point
 	// I will generate the HWP 180 degrees against the wind direction.
@@ -415,7 +462,7 @@ float AP_HeadWindLanding::calc_theta_hwp(float theta_wind, AP_Mission::Mission_C
 		{
 
 			// TO DO: Implement this: https://math.stackexchange.com/questions/1766285/is-there-a-formula-that-finds-middle-between-two-angles
-			float theta_between = begin_ext_no_landing_area + (end_ext_no_landing_area-begin_ext_no_landing_area)/2.0; //    atan2(x2-x1,y2-y1)*180.0/M_PI;  // # atan2(y, x) or atan2(sin, cos)
+			float theta_between = begin_ext_no_landing_area + (end_ext_no_landing_area-begin_ext_no_landing_area)/2.0;
 			float divider = theta_between + 180.0f;
 
 			// Is the wind vector closer to the begin or the end of the non landing zone?

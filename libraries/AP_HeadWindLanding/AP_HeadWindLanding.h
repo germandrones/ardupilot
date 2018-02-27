@@ -13,6 +13,8 @@
 #include <GCS_MAVLink/GCS_MAVLink.h>
 #include <AP_AHRS/AP_AHRS_NavEKF.h>
 
+#include <AP_Math/vector2.h>
+
 // Macro for converting the latitude and longitude back to decimal representation
 #define TO_DEG_FORMAT 1.0e-7f
 // Macro for calculating how many meters for 1 degree of latitude, given the current latitude in degrees.
@@ -35,6 +37,9 @@ typedef enum vwp_error_states {
 	HWP_LAST_MISSION_WP_NOT_FOUND,
 	HWP_INDEX_NOT_FOUND
 } hwp_error_status_t;
+
+// typedef just to avoid the long name
+typedef AP_Mission::Mission_Command MC;
 
 class AP_HeadWindLanding
 {
@@ -66,7 +71,7 @@ public:
     void calc_index_hw_waypoints();
 
     /// generate_hw_waypoints - generates the virtual waypoints based on the current settings and the wind direction.
-    void generate_hw_waypoints(const AP_Mission::Mission_Command& cmd);
+    void generate_hw_waypoints(const MC& cmd);
 
     /// update_num_commands - updates the variable containing the number of commands in the mission. This function is called after
     /// the addition and removal of the virtual waypoints.
@@ -100,6 +105,8 @@ public:
     AP_Mission::Mission_Command get_hwp1() 	{ return hwp1; }
     AP_Mission::Mission_Command get_hwp2()	{ return hwp2; }
     AP_Mission::Mission_Command get_hwp3() 	{ return hwp3; }
+    AP_Mission::Mission_Command get_hwp4() 	{ return hwp4; }
+
     // AP_Mission::Mission_Command get_reduce_speed() { return reduce_speed; }
 
     void		enable()					{ hwp_enabled = 1; }
@@ -161,7 +168,16 @@ private:
     float difference_between_angles(float first, float second);
 
     // calc_theta_hwp() - calculates the direction of the HWP based on the forbidden zone
-    float calc_theta_hwp(float theta_wind, AP_Mission::Mission_Command &last_mwp, AP_Mission::Mission_Command &land_wp);
+    float calc_theta_hwp(float theta_wind, MC &last_mwp, MC &land_wp);
+
+    bool check_crossing_no_landing_zone(MC &last_mwp, MC &land_wp, MC &lta_wp, float begin_area, float end_area);
+
+    bool IsOnSegment(double xi, double yi, double xj, double yj,double xk, double yk);
+    char ComputeDirection(double xi, double yi, double xj, double yj, double xk, double yk);
+    bool DoLineSegmentsIntersect(double x1, double y1, double x2, double y2, double x3, double y3, double x4, double y4);
+
+    // does_segments_intersect() - checks if two segments intersect. The segments are passed specifying the Point
+    bool does_segments_intersects(Vector2l &P1, Vector2l &P2, Vector2l &P3, Vector2l &P4);
 
     typedef struct {
       // The following variable set the point in the mission where the virtual waypoints are generated.
@@ -188,6 +204,7 @@ private:
     AP_Mission::Mission_Command hwp1;
     AP_Mission::Mission_Command hwp2;
     AP_Mission::Mission_Command hwp3;
+    AP_Mission::Mission_Command hwp4;
 
     // AP_Mission::Mission_Command reduce_speed;
 

@@ -175,8 +175,18 @@ void Plane::send_hwp_message(mavlink_channel_t chan)
 	AP_Mission::Mission_Command hwp1 = plane.headwind_wp.get_hwp1();
 	AP_Mission::Mission_Command hwp2 = plane.headwind_wp.get_hwp2();
 	AP_Mission::Mission_Command hwp3 = plane.headwind_wp.get_hwp3();
+	AP_Mission::Mission_Command hwp4 = plane.headwind_wp.get_hwp4();
 
-	mavlink_msg_hwp_send(chan, hwp1.content.location.lat, hwp1.content.location.lng, hwp2.content.location.lat, hwp2.content.location.lng, hwp3.content.location.lat, hwp3.content.location.lng);
+	int32_t hwp_lat1 = hwp1.content.location.lat;
+	int32_t hwp_lng1 = hwp1.content.location.lng;
+	int32_t hwp_lat2 = hwp2.content.location.lat;
+	int32_t hwp_lng2 = hwp2.content.location.lng;
+	int32_t hwp_lat3 = hwp3.content.location.lat;
+	int32_t hwp_lng3 = hwp3.content.location.lng;
+	int32_t hwp_lat4 = hwp4.content.location.lat;
+	int32_t hwp_lng4 = hwp4.content.location.lng;
+
+	mavlink_msg_hwp_send(chan, hwp_lat1,hwp_lng1,hwp_lat2,hwp_lng2,hwp_lat3,hwp_lng3,hwp_lat4,hwp_lng4);
 	plane.headwind_wp.is_hwp_sent = true;
 	//gcs().send_text(MAV_SEVERITY_NOTICE, "HWP is sent");
 }
