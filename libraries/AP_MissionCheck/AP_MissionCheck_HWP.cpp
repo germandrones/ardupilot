@@ -1,3 +1,11 @@
+/*
+ * AP_MissionCheck_VWP.cpp
+ *
+ * Created on: December 12, 2017
+ *     Author: Alessandro Benini
+ *    Company: Germandrones GmbH
+ */
+
 #include <stdio.h>
 
 #include "AP_MissionCheck_HWP.h"

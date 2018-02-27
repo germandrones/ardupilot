@@ -1,8 +1,9 @@
 /*
  * AP_HeadWindLanding.cpp
  *
- *  Created on: Nov 1, 2017
- *      Author: Alessandro Benini
+ * Created on: Nov 1, 2017
+ *     Author: Alessandro Benini
+ *    Company: Germandrones GmbH
  */
 
 #include "AP_HeadWindLanding.h"
@@ -42,15 +43,6 @@ const AP_Param::GroupInfo AP_HeadWindLanding::var_info[] = {
     // @Range: 30 150
     // @Increment: 1
     AP_GROUPINFO("LRADIUS", 3, AP_HeadWindLanding, loiter_radius, 60),
-
-    // @Param: DIRECTION
-    // @DisplayName:
-    // @Description: Direction from which the UAV should approach the landing point. By default is 0 degrees (against the wind direction).
-    // @User: Standard
-    // @Units: degrees
-    // @Range: 0 360
-    // @Increment: 1
-    AP_GROUPINFO("DIRECTION", 4, AP_HeadWindLanding, heading_wind, 0),
 
     AP_GROUPEND
 
@@ -464,6 +456,11 @@ bool AP_HeadWindLanding::is_angle_between(float start, float end, float mid)
 
 float AP_HeadWindLanding::sector_dimension_from_chord(float radius, float chord)
 {
+	// The HWP radius cannot be less than 50 meter: the dynamic and the expected velocity during transition
+	// doesn't allow to have such short distance.
+	if(radius < MIN_RADIUS_HEADINGWIND_WAYPOINT)
+		radius = MIN_RADIUS_HEADINGWIND_WAYPOINT;
+
 	return 2.0*asin(chord/(4.0*radius));
 }
 

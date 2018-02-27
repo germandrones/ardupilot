@@ -1,8 +1,9 @@
 /*
  * AP_MissionCheck_STD.h
  *
- *  Created on: December 12, 2017
- *      Author: Alessandro Benini
+ * Created on: December 12, 2017
+ *     Author: Alessandro Benini
+ *    Company: Germandrones GmbH
  */
 
 #ifndef AP_MISSIONCHECK_STD_H_

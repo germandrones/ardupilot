@@ -1,8 +1,9 @@
 /*
  * AP_HeadWindLanding.h
  *
- *  Created on: Nov 1, 2017
- *      Author: Alessandro Benini
+ * Created on: Nov 1, 2017
+ *     Author: Alessandro Benini
+ *    Company: Germandrones GmbH
  */
 
 #ifndef _APHEADWINDLANDING_H
@@ -126,7 +127,7 @@ protected:
     AP_Float dist_hwpl_2;
     AP_Float dist_hwpl_3;
 
-    // The following two variables describes the beginning and the end of the forbidden area where the HWP
+    // The following variables describes the beginning and the end of the forbidden area where the HWP
     // cannot be generated. The areas is described as the sector of the circle centered in the landing point.
     // The begin_forbidden_area and end_forbidden_area variables represent the angles from the North axis
     // using the NED frame.
@@ -145,16 +146,18 @@ private:
     // for temporarily disable the mission
     bool is_disable_HWP_command_present();
 
-    // check_forbidden_area - checks if the user set a forbidden area where the HWP should not be generated
+    // check_forbidden_area - checks if the user set a no landing area where the HWP should not be generated
     void check_no_landing_area_defined(void);
 
     // sector_dimension_from_chord() - returns the size of the circular sector specifying the radius of the circle
-    // and the lenght of the chord.
+    // and the lenght of the chord. This functions is used to see how far from the forbidden area we must stay considering
+    // the space required by the UAV for performing the loiter to altitude.
     float sector_dimension_from_chord(float radius, float chord);
 
     // is_angle_between() - checks if an angle is between two angles
     bool is_angle_between(float start, float end, float mid);
 
+    // difference_between_angles() - calculates the difference between two angles
     float difference_between_angles(float first, float second);
 
     // calc_theta_hwp() - calculates the direction of the HWP based on the forbidden zone

@@ -1,8 +1,9 @@
 /*
  * AP_MissionCheck.cpp
  *
- *  Created on: August 10, 2017
- *      Author: Alessandro Benini
+ * Created on: December 12, 2017
+ *     Author: Alessandro Benini
+ *    Company: Germandrones GmbH
  */
 
 #include <stdio.h>

@@ -1,3 +1,11 @@
+/*
+ * AP_HeadWindLanding.h
+ *
+ * Created on: December 12, 2017
+ *     Author: Alessandro Benini
+ *    Company: Germandrones GmbH
+ */
+
 #include "AP_MissionCheck_STD.h"
 
 #include <stdio.h>

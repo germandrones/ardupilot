@@ -1,3 +1,11 @@
+/*
+ * initial_checks.cpp
+ *
+ * Created on: December 15, 2017
+ *     Author: Alessandro Benini
+ *    Company: Germandrones GmbH
+ */
+
 #include "Plane.h"
 
 // This function performs the initial checks when the ArmingRequired parameter is set to YES_GDPILOT
