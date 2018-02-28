@@ -80,6 +80,7 @@ void AP_HeadWindLanding::init_HWP(void)
     hwp1 = {};
     hwp2 = {};
     hwp3 = {};
+    hwp4 = {};
     // reduce_speed = {};
 
     hwp_status = HWP_INITIALIZED;
@@ -296,9 +297,7 @@ void AP_HeadWindLanding::generate_hw_waypoints(const MC& cmd)
 		// WindX is the component of the wind along North Axis. WindY is the component of the wind along East Axis.
 		thetaWind = atan2(wind.y,wind.x)*180.0/M_PI;
 
-		// thetaWind = 90.0f;
-
-		// New theta is the angle from north along which the HWP will be generated
+		// thetaWind = 90.0;
 
 		// TODO: rename wp to land_wp
 		theta_hwp = calc_theta_hwp(thetaWind,last_mwp,wp);
@@ -362,6 +361,9 @@ void AP_HeadWindLanding::generate_hw_waypoints(const MC& cmd)
 		hwp1 = last_mwp;
 		hwp1.id = MAV_CMD_NAV_WAYPOINT;
 		hwp1.content.location = loc_hwp1;
+
+		hwp4.content.location.lat = -1;
+		hwp4.content.location.lng = -1;
 
 		// Before adding the HWP waypoints to the mission, we need to check if the segment connecting the last mission waypoint
 		// and the farthest HWP waypoint (LTA) intersect the no landing zone. If yes, we need to add one more waypoint. This fourth
