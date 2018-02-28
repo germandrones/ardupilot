@@ -978,7 +978,7 @@ GCS_MAVLINK_Plane::data_stream_send(void)
         send_message(MSG_LOCATION_NEITZKE);
         if(plane.ack_to_gdpilot_must_be_sent)
         {
-        	gcs().send_text(MAV_SEVERITY_INFO, "Sending ACK to GD");
+        	// gcs().send_text(MAV_SEVERITY_INFO, "Sending ACK to GD");
         	send_message(MSG_ACK_GDPILOT);
         }
     }

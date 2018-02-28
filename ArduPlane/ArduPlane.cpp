@@ -33,8 +33,6 @@
 
 #endif
 
-bool hwp_status_printed = false;
-
 /*
   scheduler table - all regular tasks are listed here, along with how
   often they should be called (in Hz) and the maximum time
@@ -328,17 +326,6 @@ void Plane::update_aux(void)
 
 void Plane::one_second_loop()
 {
-
-    if(!hwp_status_printed)
-    {
-
-		if(headwind_wp.is_hwp_enabled())
-			gcs().send_text(MAV_SEVERITY_NOTICE, "VWP enabled");
-		else
-			gcs().send_text(MAV_SEVERITY_NOTICE, "VWP disabled");
-
-			hwp_status_printed = true;
-	}
 
 #ifdef HW_TEST
 
