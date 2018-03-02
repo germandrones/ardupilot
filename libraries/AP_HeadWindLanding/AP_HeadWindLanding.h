@@ -129,6 +129,7 @@ protected:
     AP_Float hwp_spd;
 
     AP_Int16 loiter_radius;
+    AP_Int16 waypoint_radius; // waypoint radius during landing sequence
 
     AP_Float dist_hwpl_1;
     AP_Float dist_hwpl_2;

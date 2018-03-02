@@ -9,11 +9,8 @@
 #include "AP_HeadWindLanding.h"
 #include <GCS_MAVLink/GCS.h>
 
-#define MIN_RADIUS_DURING_LOITER 30
-#define MAX_RADIUS_DURING_LOITER 150
-
-#define MIN_RADIUS_HEADINGWIND_WAYPOINT 100
-#define MAX_RADIUS_HEADINGWIND_WAYPOINT 400
+#define MIN_RADIUS_DURING_LOITER 60
+#define MIN_RADIUS_HEADINGWIND_WAYPOINT 200
 
 const AP_Param::GroupInfo AP_HeadWindLanding::var_info[] = {
 
@@ -26,15 +23,6 @@ const AP_Param::GroupInfo AP_HeadWindLanding::var_info[] = {
     // @Increment: 1
     AP_GROUPINFO("ENABLED", 1, AP_HeadWindLanding, hwp_enabled, 0),
 
-    // @Param: RADIUS
-    // @DisplayName: Radius of the heading waypoint area
-    // @Description: Radius of the area where the Heading Wind waypoints will be generated
-    // @User: Standard
-    // @Units: m
-    // @Range: 100 400
-    // @Increment: 1
-    AP_GROUPINFO("RADIUS", 2, AP_HeadWindLanding, hwp_radius, 200),
-
     // @Param: LOITER_RADIUS
     // @DisplayName: Radius of the loiter waypoint
     // @Description: Radius of the loiter circle for reaching the desired altitude during the landing phase
@@ -42,7 +30,16 @@ const AP_Param::GroupInfo AP_HeadWindLanding::var_info[] = {
     // @Units: m
     // @Range: 30 150
     // @Increment: 1
-    AP_GROUPINFO("LRADIUS", 3, AP_HeadWindLanding, loiter_radius, 60),
+    AP_GROUPINFO("LRADIUS", 2, AP_HeadWindLanding, loiter_radius, 60),
+
+    // @Param: HWP_ENABLE
+    // @DisplayName: Enabling heading waypoint feature
+    // @Description: This parameter allows to enable/disable the heading waypoint feature. By default this feature is enabled.
+    // @User: Standard
+    // @Units: Boolean
+    // @Range: 0 1
+    // @Increment: 1
+    AP_GROUPINFO("WPRADIUS", 3, AP_HeadWindLanding, waypoint_radius, 30),
 
     AP_GROUPEND
 
@@ -268,15 +265,18 @@ void AP_HeadWindLanding::generate_hw_waypoints(const MC& cmd)
 		// This value has to be divided by 3, since we have 3 virtual waypoints.
 		// Therefore minimum_distance is 54.29 --> 55 meters.
 
+		// Calculation of HWP radius. The minimum radius must be such that the UAV doesn't jump waypoints
+		// because they are too close. We define the minimum radius according to the following formula:
+		// hwp_radius=2*loiter_to_altitude+4*waypoint_radius (waypoint point radius is set to 30 meters for the moment).
+
+		hwp_radius = 2*loiter_radius+4*waypoint_radius;
+
 		if(hwp_radius < MIN_RADIUS_HEADINGWIND_WAYPOINT)
 			hwp_radius = MIN_RADIUS_HEADINGWIND_WAYPOINT;
 
-		if(hwp_radius > MAX_RADIUS_HEADINGWIND_WAYPOINT)
-			hwp_radius = MAX_RADIUS_HEADINGWIND_WAYPOINT;
-
-		dist_hwpl_1 = hwp_radius / 2.0f;
-		dist_hwpl_2 = hwp_radius * (3.0f/4.0f);
-		dist_hwpl_3 = hwp_radius;
+		dist_hwpl_1 = hwp_radius - 2*loiter_radius - 2*waypoint_radius;	// Distance between landing waypoint and closest HWP
+		dist_hwpl_2 = hwp_radius - 2*loiter_radius;                     // Distance between landing waypoint and mid HWP
+		dist_hwpl_3 = hwp_radius;                                       // Distance between the landing point and the LTA waypoint
 
 		// Retrieve information about the wind --------------------------------------------
 		// I assume that at this point of the mission I have a good estimation of wind
@@ -344,9 +344,6 @@ void AP_HeadWindLanding::generate_hw_waypoints(const MC& cmd)
 
 		if(loiter_radius < MIN_RADIUS_DURING_LOITER)
 			loiter_radius = MIN_RADIUS_DURING_LOITER;
-
-		if(loiter_radius > MAX_RADIUS_DURING_LOITER)
-			loiter_radius = MAX_RADIUS_DURING_LOITER;
 
 		hwp3.p1 = (uint16_t)loiter_radius;
 
