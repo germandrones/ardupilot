@@ -120,7 +120,7 @@
 #include <SITL/SITL.h>
 #endif
 
-// #define HW_TEST 1
+#define HW_TEST 1
 
 /*
   a plane specific AP_AdvancedFailsafe class
@@ -893,6 +893,8 @@ private:
     void Log_Write_HWP(int _mid, float _lat, float _lon, float _alt, int _ishwp);
 
     void gcs_send_hwp_info(const AP_Mission::Mission_Command &cmd);
+
+    void temporarily_limit_nav_roll();
 
     void load_parameters(void);
     void convert_mixers(void);

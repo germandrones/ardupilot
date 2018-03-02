@@ -81,6 +81,7 @@ void AP_HeadWindLanding::init_HWP(void)
     // reduce_speed = {};
 
     hwp_status = HWP_INITIALIZED;
+
 }
 
 bool AP_HeadWindLanding::is_disable_HWP_command_present()
@@ -269,12 +270,12 @@ void AP_HeadWindLanding::generate_hw_waypoints(const MC& cmd)
 		// because they are too close. We define the minimum radius according to the following formula:
 		// hwp_radius=2*loiter_to_altitude+4*waypoint_radius (waypoint point radius is set to 30 meters for the moment).
 
-		hwp_radius = 2*loiter_radius+4*waypoint_radius;
+		hwp_radius = 2*loiter_radius+5*waypoint_radius;
 
 		if(hwp_radius < MIN_RADIUS_HEADINGWIND_WAYPOINT)
 			hwp_radius = MIN_RADIUS_HEADINGWIND_WAYPOINT;
 
-		dist_hwpl_1 = hwp_radius - 2*loiter_radius - 2*waypoint_radius;	// Distance between landing waypoint and closest HWP
+		dist_hwpl_1 = hwp_radius - 2*loiter_radius - 3*waypoint_radius;	// Distance between landing waypoint and closest HWP
 		dist_hwpl_2 = hwp_radius - 2*loiter_radius;                     // Distance between landing waypoint and mid HWP
 		dist_hwpl_3 = hwp_radius;                                       // Distance between the landing point and the LTA waypoint
 
@@ -297,7 +298,7 @@ void AP_HeadWindLanding::generate_hw_waypoints(const MC& cmd)
 		// WindX is the component of the wind along North Axis. WindY is the component of the wind along East Axis.
 		thetaWind = atan2(wind.y,wind.x)*180.0/M_PI;
 
-		// thetaWind = 90.0;
+		thetaWind = 90.0;
 
 		// TODO: rename wp to land_wp
 		theta_hwp = calc_theta_hwp(thetaWind,last_mwp,wp);

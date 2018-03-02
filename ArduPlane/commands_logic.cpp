@@ -454,6 +454,8 @@ void Plane::do_nav_wp(const AP_Mission::Mission_Command& cmd)
 {
     set_next_WP(cmd.content.location);
 
+    // TODO: Check if the current nav waypoint requires to reduce the bank angle.
+
     // ========================================================================================
     // Check if it's time to generate the virtual waypoints
     headwind_wp.generate_hw_waypoints(cmd);

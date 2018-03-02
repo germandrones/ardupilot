@@ -669,7 +669,14 @@ void Plane::handle_auto_mode(void)
         } else {
             calc_throttle();
         }
-    } else {
+    } else if (nav_cmd_id == MAV_CMD_NAV_WAYPOINT && mission.get_current_nav_cmd().p1 == 0x02)
+    {
+    	// If parameter p1 is set to 0x02, it means that we are performing the 8-shape and the roll must be limited
+    	temporarily_limit_nav_roll();
+        calc_nav_pitch();
+        calc_throttle();
+    }
+    else {
         // we are doing normal AUTO flight, the special cases
         // are for takeoff and landing
         if (nav_cmd_id != MAV_CMD_NAV_CONTINUE_AND_CHANGE_ALT) {

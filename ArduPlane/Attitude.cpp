@@ -561,6 +561,12 @@ void Plane::calc_nav_roll()
     update_load_factor();
 }
 
+void Plane::temporarily_limit_nav_roll()
+{
+	int32_t commanded_roll = nav_controller->nav_roll_cd();
+    nav_roll_cd = constrain_int32(commanded_roll, -1000, 1000);
+}
+
 
 bool Plane::allow_reverse_thrust(void)
 {
