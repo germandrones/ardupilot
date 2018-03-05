@@ -2102,6 +2102,9 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
     // Special case for mission items to see if we need to enable/disable the HWP feature
     case MAVLINK_MSG_ID_MISSION_ITEM:
     case MAVLINK_MSG_ID_MISSION_ITEM_INT:
+
+    	gcs().send_text(MAV_SEVERITY_NOTICE, "Current cmd id is %d, %d, %d",mcdm.index,mcdm.id,mcdm.p1);
+
 		handle_common_message(msg);
 
 		// The following check is enabled only when the full mission has been uploaded
@@ -2125,6 +2128,21 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
 					plane.headwind_wp.temporarily_disable();
 					plane.mission_checker = new MissionCheck_STD{plane.mission,plane.DataFlash,plane._gcs};
 					gcs().send_text(MAV_SEVERITY_NOTICE, "Found HWP disable command");
+					break;
+				}
+			}
+
+			AP_Mission::Mission_Command mcdm;
+
+			for(int i = 0; i < num_commands; i++)
+			{
+				// If I found the command MAV_CMD_HWP the HWP feature is disabled and I have to check is the mission
+				plane.mission.get_next_nav_cmd(i,mcdm);
+				gcs().send_text(MAV_SEVERITY_NOTICE, "Current cmd id is %d, %d, %d",mcdm.index,mcdm.id,mcdm.p1);
+				// follows the rules of the default mission
+				if(mcdm.id == MAV_CMD_NAV_WAYPOINT && mcdm.p1 == 0x02)
+				{
+					gcs().send_text(MAV_SEVERITY_NOTICE, "Cmd %d belongs to 8 shape",i);
 					break;
 				}
 			}
