@@ -2062,6 +2062,12 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
         plane.adsb.handle_message(chan, msg);
         break;
 
+    case MAVLINK_MSG_ID_FILE_ID:
+    	mavlink_file_id_t msg_file_id;
+    	mavlink_msg_file_id_decode(msg,&msg_file_id);
+    	gcs().send_text(MAV_SEVERITY_CRITICAL, "GD FILE ID MSG: %d",msg_file_id.id);
+    	break;
+
     // This message comes from GDPilot
     case MAVLINK_MSG_ID_INITIAL_CHECK:
 
