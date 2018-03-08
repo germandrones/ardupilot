@@ -2032,7 +2032,7 @@ void GCS_MAVLINK::send_banner()
     // mark the firmware version in the tlog
     const AP_FWVersion &fwver = get_fwver();
     send_text(MAV_SEVERITY_INFO, fwver.fw_string);
-
+    
     // Don't send PX4 firmware info to GCS.
     /*if (fwver.middleware_hash_str && fwver.os_hash_str) {
         send_text(MAV_SEVERITY_INFO, "PX4: %s NuttX: %s", fwver.middleware_hash_str, fwver.os_hash_str);

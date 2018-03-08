@@ -191,6 +191,12 @@ void Plane::send_hwp_message(mavlink_channel_t chan)
 	//gcs().send_text(MAV_SEVERITY_NOTICE, "HWP is sent");
 }
 
+void Plane::send_log_info_request(mavlink_channel_t chan)
+{
+    mavlink_msg_log_info_request_send(chan, 0);
+    gcs().send_text(MAV_SEVERITY_NOTICE, "log info request from px4");
+}
+
 void Plane::send_location_neitzke(mavlink_channel_t chan)
 {
 
@@ -540,7 +546,7 @@ bool GCS_MAVLINK::is_message_nesesary_for_np(enum ap_message id)
 		case	MSG_CURRENT_WAYPOINT:
 		case	MSG_NEXT_WAYPOINT:
 		case 	MSG_ACK_GDPILOT:
-
+        
 			return true;
 
 		case	MSG_LOCATION:
@@ -582,7 +588,8 @@ bool GCS_MAVLINK::is_message_nesesary_for_np(enum ap_message id)
 		case MSG_AOA_SSA:
 		case MSG_LANDING:
 		case MSG_NAMED_FLOAT:
-		case MSG_HWP:
+        case MSG_HWP:
+        case MSG_LOG_INFO_REQUEST:
 		case MSG_LAST:
 
 			return false;
@@ -650,6 +657,11 @@ bool GCS_MAVLINK_Plane::try_send_message(enum ap_message id)
 		CHECK_PAYLOAD_SIZE(HWP);
 		plane.send_hwp_message(chan);
 		break;
+    
+    case MSG_LOG_INFO_REQUEST:
+        CHECK_PAYLOAD_SIZE(LOG_INFO_REQUEST);
+        plane.send_log_info_request(chan);
+        break;
 
 	case MSG_LOCATION_NEITZKE:
 		if (!neitzkePilot_detected)
@@ -1016,7 +1028,7 @@ GCS_MAVLINK_Plane::data_stream_send(void)
         if(plane.headwind_wp.hwp_status == HWP_GENERATED && plane.headwind_wp.is_hwp_sent == false)
         {
         	send_message(MSG_HWP);
-        }
+        }        
     }
 
     if (gcs().out_of_time()) return;
@@ -2098,6 +2110,13 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
 			//gcs().send_text(MAV_SEVERITY_NOTICE, "GD MSG: %d, %s",plane.gd_status.err_num,plane.gd_status.err_msg);
         }
     	break;
+
+    case MAVLINK_MSG_ID_LOG_INFO_REQUEST:
+    {
+        mavlink_log_info_request_t msg_file_id;
+        mavlink_msg_log_info_request_decode(msg,&msg_file_id);
+        gcs().send_text(MAV_SEVERITY_CRITICAL, "GD FILE ID MSG: %d",msg_file_id.id);
+    }
 
     // Special case for mission items to see if we need to enable/disable the HWP feature
     case MAVLINK_MSG_ID_MISSION_ITEM:
