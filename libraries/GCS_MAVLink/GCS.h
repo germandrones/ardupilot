@@ -85,7 +85,6 @@ enum ap_message {
 	MSG_LOCATION_NEITZKE, //keep this at the end of the enum (just before MSG_LAST)
 	MSG_ACK_GDPILOT, // This is used for sending ack/nack to GDPilot
     MSG_HWP, // Message definition for HeadWind WP
-	MSG_LOG_INFO_REQUEST,
     MSG_LAST // MSG_LAST must be the last entry in this enum
 };
 
@@ -261,7 +260,7 @@ protected:
 
     //flag indicate whether this port is connected to NeitzkePilot
     bool neitzkePilot_detected;
-
+    
     // indicate which system status is neitzke
     MAV_STATE gdpilot_system_status;
 
