@@ -2106,7 +2106,12 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
         mavlink_msg_log_info_request_decode(msg,&msg_file_id);
         if(msg_file_id.id != 0)
         {
-            gcs().send_text(MAV_SEVERITY_CRITICAL, "GD Log Filename: LOG%05u.bin", msg_file_id.id);
+            gcs().send_text(MAV_SEVERITY_NOTICE, "GD Log Filename: LOG%05u.bin", msg_file_id.id);
+            gcs().send_text(MAV_SEVERITY_NOTICE, "PX Log Filename: %08u.bin", plane.DataFlash.find_last_log());
+            
+            char gitHash[40];
+            strncpy(gitHash, msg_file_id.gitHash, 40);
+            gcs().send_text(MAV_SEVERITY_NOTICE, "SongbirdGD-3.8.0 (%.8s)", msg_file_id.gitHash);
         }
     }
 
