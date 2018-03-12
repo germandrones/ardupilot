@@ -43,6 +43,7 @@ GCS_MAVLINK::GCS_MAVLINK()
 {
     AP_Param::setup_object_defaults(this, var_info);
     neitzkePilot_detected = false;
+    mission_uploaded = false;
 }
 
 void
@@ -747,9 +748,11 @@ bool GCS_MAVLINK::handle_mission_item(mavlink_message_t *msg, AP_Mission &missio
         send_text(MAV_SEVERITY_INFO,"Flight plan received");
         waypoint_receiving = false;
         mission_is_complete = true;
+        mission_uploaded = true;
         // XXX ignores waypoint radius for individual waypoints, can
         // only set WP_RADIUS parameter
     } else {
+    	mission_uploaded = false;
         waypoint_timelast_request = AP_HAL::millis();
         // if we have enough space, then send the next WP immediately
         if (HAVE_PAYLOAD_SPACE(chan, MISSION_ITEM)) {

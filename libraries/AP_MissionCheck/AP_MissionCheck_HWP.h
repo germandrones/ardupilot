@@ -1,8 +1,9 @@
 /*
  * AP_MissionCheck_VWP.h
  *
- *  Created on: December 12, 2017
- *      Author: Alessandro Benini
+ * Created on: December 12, 2017
+ *     Author: Alessandro Benini
+ *    Company: Germandrones GmbH
  */
 
 #ifndef AP_MISSIONCHECK_VWP_H_
@@ -29,6 +30,8 @@ private:
     
     AP_HeadWindLanding&	_headwind_wp;
     bool                hwp_feature_usable;
+
+    bool is_landing_sequence_present();
   
 };
 

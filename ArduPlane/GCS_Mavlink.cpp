@@ -175,10 +175,19 @@ void Plane::send_hwp_message(mavlink_channel_t chan)
 	AP_Mission::Mission_Command hwp1 = plane.headwind_wp.get_hwp1();
 	AP_Mission::Mission_Command hwp2 = plane.headwind_wp.get_hwp2();
 	AP_Mission::Mission_Command hwp3 = plane.headwind_wp.get_hwp3();
+	AP_Mission::Mission_Command hwp4 = plane.headwind_wp.get_hwp4();
 
-	mavlink_msg_hwp_send(chan, hwp1.content.location.lat, hwp1.content.location.lng, hwp2.content.location.lat, hwp2.content.location.lng, hwp3.content.location.lat, hwp3.content.location.lng);
-	//plane.headwind_wp.is_hwp_sent = true;
-	gcs().send_text(MAV_SEVERITY_NOTICE, "HWP is sent");    
+	int32_t hwp_lat1 = hwp1.content.location.lat;
+	int32_t hwp_lng1 = hwp1.content.location.lng;
+	int32_t hwp_lat2 = hwp2.content.location.lat;
+	int32_t hwp_lng2 = hwp2.content.location.lng;
+	int32_t hwp_lat3 = hwp3.content.location.lat;
+	int32_t hwp_lng3 = hwp3.content.location.lng;
+	int32_t hwp_lat4 = hwp4.content.location.lat;
+	int32_t hwp_lng4 = hwp4.content.location.lng;
+
+	mavlink_msg_hwp_send(chan, hwp_lat1,hwp_lng1,hwp_lat2,hwp_lng2,hwp_lat3,hwp_lng3,hwp_lat4,hwp_lng4);
+
 }
 
 void Plane::send_location_neitzke(mavlink_channel_t chan)
@@ -968,7 +977,7 @@ GCS_MAVLINK_Plane::data_stream_send(void)
         send_message(MSG_LOCATION_NEITZKE);
         if(plane.ack_to_gdpilot_must_be_sent)
         {
-        	gcs().send_text(MAV_SEVERITY_INFO, "Sending ACK to GD");
+        	// gcs().send_text(MAV_SEVERITY_INFO, "Sending ACK to GD");
         	send_message(MSG_ACK_GDPILOT);
         }
     }
@@ -2097,6 +2106,41 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
         plane.headwind_wp.ack_echo_received();
         break;
     }
+
+    // Special case for mission items to see if we need to enable/disable the HWP feature
+    case MAVLINK_MSG_ID_MISSION_ITEM:
+    case MAVLINK_MSG_ID_MISSION_ITEM_INT:
+		handle_common_message(msg);
+
+		// The following check is enabled only when the full mission has been uploaded
+		if(is_mission_uploaded())
+		{
+			int num_commands = plane.mission.num_commands();
+
+			// By default, PixHawk is supposed to check the mission with the HWP feature enabled
+			plane.mission_checker = new MissionCheck_HWP{plane.mission,plane.DataFlash,plane.headwind_wp,plane._gcs};
+			if(!plane.headwind_wp.is_hwp_enabled())
+			{
+				plane.headwind_wp.temporarily_enable();
+			}
+
+			for(int i = 0; i < num_commands; i++)
+			{
+				// If I found the command MAV_CMD_HWP the HWP feature is disabled and I have to check is the mission
+				// follows the rules of the default mission
+				if(plane.mission.get_command_id(i) == MAV_CMD_DO_DISABLE_HWP)
+				{
+					plane.headwind_wp.temporarily_disable();
+					plane.mission_checker = new MissionCheck_STD{plane.mission,plane.DataFlash,plane._gcs};
+					gcs().send_text(MAV_SEVERITY_NOTICE, "Found HWP disable command");
+					break;
+				}
+			}
+			// Preliminary check of the mission
+			plane.mission_checker->check();
+		}
+
+		break;
 
     default:
         handle_common_message(msg);

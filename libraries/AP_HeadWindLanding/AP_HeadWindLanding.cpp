@@ -1,18 +1,16 @@
 /*
  * AP_HeadWindLanding.cpp
  *
- *  Created on: Nov 1, 2017
- *      Author: Alessandro Benini
+ * Created on: Nov 1, 2017
+ *     Author: Alessandro Benini
+ *    Company: Germandrones GmbH
  */
 
 #include "AP_HeadWindLanding.h"
 #include <GCS_MAVLink/GCS.h>
 
-#define MIN_RADIUS_DURING_LOITER 30
-#define MAX_RADIUS_DURING_LOITER 150
-
-#define MIN_RADIUS_HEADINGWIND_WAYPOINT 100
-#define MAX_RADIUS_HEADINGWIND_WAYPOINT 400
+#define MIN_RADIUS_DURING_LOITER 60
+#define MIN_RADIUS_HEADINGWIND_WAYPOINT 200
 
 const AP_Param::GroupInfo AP_HeadWindLanding::var_info[] = {
 
@@ -25,15 +23,6 @@ const AP_Param::GroupInfo AP_HeadWindLanding::var_info[] = {
     // @Increment: 1
     AP_GROUPINFO("ENABLED", 1, AP_HeadWindLanding, hwp_enabled, 0),
 
-    // @Param: RADIUS
-    // @DisplayName: Radius of the heading waypoint area
-    // @Description: Radius of the area where the Heading Wind waypoints will be generated
-    // @User: Standard
-    // @Units: m
-    // @Range: 100 400
-    // @Increment: 1
-    AP_GROUPINFO("RADIUS", 2, AP_HeadWindLanding, hwp_radius, 200),
-
     // @Param: LOITER_RADIUS
     // @DisplayName: Radius of the loiter waypoint
     // @Description: Radius of the loiter circle for reaching the desired altitude during the landing phase
@@ -41,7 +30,16 @@ const AP_Param::GroupInfo AP_HeadWindLanding::var_info[] = {
     // @Units: m
     // @Range: 30 150
     // @Increment: 1
-    AP_GROUPINFO("LRADIUS", 3, AP_HeadWindLanding, loiter_radius, 60),
+    AP_GROUPINFO("LRADIUS", 2, AP_HeadWindLanding, loiter_radius, 60),
+
+    // @Param: HWP_ENABLE
+    // @DisplayName: Enabling heading waypoint feature
+    // @Description: This parameter allows to enable/disable the heading waypoint feature. By default this feature is enabled.
+    // @User: Standard
+    // @Units: Boolean
+    // @Range: 0 1
+    // @Increment: 1
+    AP_GROUPINFO("WPRADIUS", 3, AP_HeadWindLanding, waypoint_radius, 30),
 
     AP_GROUPEND
 
@@ -64,17 +62,69 @@ void AP_HeadWindLanding::init_HWP(void)
     idx_last_mission_wp = -1;
     idx_hwp = 0;
 
+    begin_no_landing_area = 0.0f;
+    end_no_landing_area = 0.0f;
+
+    is_no_landing_area_set = false;
+
     // I calculate all the indexes
     calc_index_landing_waypoint();
     calc_index_last_mission_waypoint();
     calc_index_hw_waypoints();
 
+    check_no_landing_area_defined();
+
     hwp1 = {};
     hwp2 = {};
     hwp3 = {};
+    hwp4 = {};
     // reduce_speed = {};
 
     hwp_status = HWP_INITIALIZED;
+}
+
+bool AP_HeadWindLanding::is_disable_HWP_command_present()
+{
+	  AP_Mission::Mission_Command cmd;
+
+	  uint16_t num_items = _mission.num_commands();
+
+	  for(uint16_t i = 0; i < num_items; i++)
+	  {
+	      _mission.get_next_nav_cmd(i, cmd);
+
+	      if(cmd.id == MAV_CMD_DO_DISABLE_HWP)
+	      {
+	    	  return false;
+	      }
+	  }
+	  return true;
+}
+
+void AP_HeadWindLanding::check_no_landing_area_defined(void)
+{
+    // Command item used for iterating through the mission
+    AP_Mission::Mission_Command current_cmd;
+
+    // Start iterating from the end of the mission
+    for(int16_t i=num_cmd-1; i>=0; i--)
+    {
+		_mission.get_next_nav_cmd(i, current_cmd);
+
+		if(current_cmd.id == MAV_CMD_SET_FORBIDDEN_ZONE)
+		{
+			is_no_landing_area_set = true;
+			begin_no_landing_area = current_cmd.content.forbidden_zone.begin_area_sector;
+			end_no_landing_area = begin_no_landing_area + current_cmd.content.forbidden_zone.offset;
+
+			if(end_no_landing_area < 360.0)
+				end_no_landing_area += 360.0;
+			if(end_no_landing_area > 360.0)
+				end_no_landing_area -= 360.0;
+			return;
+		}
+    }
+
 }
 
 void AP_HeadWindLanding::calc_index_landing_waypoint(void)
@@ -169,7 +219,7 @@ bool AP_HeadWindLanding::all_conditions_satisfied()
 }
 
 // This function generates the virtual waypoints to attach at the end of mission, right before the landing waypoint
-void AP_HeadWindLanding::generate_hw_waypoints(const AP_Mission::Mission_Command& cmd)
+void AP_HeadWindLanding::generate_hw_waypoints(const MC& cmd)
 {
 
     // Check if the current cmd is where I should generate the virtual waypoints and there are no errors
@@ -215,15 +265,18 @@ void AP_HeadWindLanding::generate_hw_waypoints(const AP_Mission::Mission_Command
 		// This value has to be divided by 3, since we have 3 virtual waypoints.
 		// Therefore minimum_distance is 54.29 --> 55 meters.
 
+		// Calculation of HWP radius. The minimum radius must be such that the UAV doesn't jump waypoints
+		// because they are too close. We define the minimum radius according to the following formula:
+		// hwp_radius=2*loiter_to_altitude+4*waypoint_radius (waypoint point radius is set to 30 meters for the moment).
+
+		hwp_radius = 2*loiter_radius+4*waypoint_radius;
+
 		if(hwp_radius < MIN_RADIUS_HEADINGWIND_WAYPOINT)
 			hwp_radius = MIN_RADIUS_HEADINGWIND_WAYPOINT;
 
-		if(hwp_radius > MAX_RADIUS_HEADINGWIND_WAYPOINT)
-			hwp_radius = MAX_RADIUS_HEADINGWIND_WAYPOINT;
-
-		dist_hwpl_1 = hwp_radius / 2.0f;
-		dist_hwpl_2 = hwp_radius * (3.0f/4.0f);
-		dist_hwpl_3 = hwp_radius;
+		dist_hwpl_1 = hwp_radius - 2*loiter_radius - 2*waypoint_radius;	// Distance between landing waypoint and closest HWP
+		dist_hwpl_2 = hwp_radius - 2*loiter_radius;                     // Distance between landing waypoint and mid HWP
+		dist_hwpl_3 = hwp_radius;                                       // Distance between the landing point and the LTA waypoint
 
 		// Retrieve information about the wind --------------------------------------------
 		// I assume that at this point of the mission I have a good estimation of wind
@@ -233,30 +286,36 @@ void AP_HeadWindLanding::generate_hw_waypoints(const AP_Mission::Mission_Command
 		_ahrs.get_NavEKF2().getWind(0,wind);
 
 		float modWind = sqrt(wind.x*wind.x+wind.y*wind.y);
-		gcs().send_text(MAV_SEVERITY_NOTICE, "WIND_SPD:%f",modWind);
+		// gcs().send_text(MAV_SEVERITY_NOTICE, "WIND_SPD:%f",modWind);
 		// -------------------------------------------------------------------------------
 
 		// Default distance of VWP when there is no wind
 		// Direction of the Wind (rad)
 		float thetaWind = 0.0f;
-		float new_theta_hwp = 0.0f;
+		float theta_hwp = 0.0f;
 
 		// WindX is the component of the wind along North Axis. WindY is the component of the wind along East Axis.
-		thetaWind = atan2(wind.y,wind.x);
-		// New theta is the wind direction
-		new_theta_hwp = thetaWind + heading_wind*DEG_TO_RAD;
+		thetaWind = atan2(wind.y,wind.x)*180.0/M_PI;
+
+		// thetaWind = 90.0;
+
+		// TODO: rename wp to land_wp
+		theta_hwp = calc_theta_hwp(thetaWind,last_mwp,wp);
+
+		float theta_hwp_rad = theta_hwp*M_PI/180.0f;
+
 		// GCS_SEND_MSG("WIND_DIR:%f",thetaWind*180.0f/3.1415f);
 
-		// Calculate the coordinates of the first virtual waypoint -----------------------
-		loc_hwp1.lat = land_wp.lat + dist_hwpl_1*cos(new_theta_hwp) / mdlat * 10000000.0f;
-		loc_hwp1.lng = land_wp.lng + dist_hwpl_1*sin(new_theta_hwp) / mdlng * 10000000.0f;
+		// Calculate the coordinates of the first heading wind waypoint -----------------------
+		loc_hwp1.lat = land_wp.lat + dist_hwpl_1*cos(theta_hwp_rad) / mdlat * 10000000.0f;
+		loc_hwp1.lng = land_wp.lng + dist_hwpl_1*sin(theta_hwp_rad) / mdlng * 10000000.0f;
 		// The altitude is the same as the altitude of the last waypoint mission
 		loc_hwp1.alt = land_wp.alt;
 		loc_hwp1.options = 1<<0; // Relative altitude
 
-		// Calculate the coordinates of the second virtual waypoint ----------------------
-		loc_hwp2.lat = land_wp.lat + dist_hwpl_2*cos(new_theta_hwp) / mdlat * 10000000.0f;
-		loc_hwp2.lng = land_wp.lng + dist_hwpl_2*sin(new_theta_hwp) / mdlng * 10000000.0f;
+		// Calculate the coordinates of the second heading waypoint ----------------------
+		loc_hwp2.lat = land_wp.lat + dist_hwpl_2*cos(theta_hwp_rad) / mdlat * 10000000.0f;
+		loc_hwp2.lng = land_wp.lng + dist_hwpl_2*sin(theta_hwp_rad) / mdlng * 10000000.0f;
 		// The altitude is the same as the altitude of the last waypoint mission
 		loc_hwp2.alt = land_wp.alt;
 		loc_hwp2.options = 1<<0;
@@ -265,11 +324,11 @@ void AP_HeadWindLanding::generate_hw_waypoints(const AP_Mission::Mission_Command
 		// vwp2_spd.speed_type = 0;
 		// The target speed is set as 80% of the current speed
 		// float current_speed = ahrs.getLastGNDSpeed();
-		float reduced_speed = hwp_spd; //current_speed*80.0f/100.0f;
+		float reduced_speed = hwp_spd;
 
 		// Calculate the coordinates of the third virtual waypoint -----------------------
-		loc_hwp3.lat = land_wp.lat + dist_hwpl_3*cos(new_theta_hwp) / mdlat * 10000000.0f;
-		loc_hwp3.lng = land_wp.lng + dist_hwpl_3*sin(new_theta_hwp) / mdlng * 10000000.0f;
+		loc_hwp3.lat = land_wp.lat + dist_hwpl_3*cos(theta_hwp_rad) / mdlat * 10000000.0f;
+		loc_hwp3.lng = land_wp.lng + dist_hwpl_3*sin(theta_hwp_rad) / mdlng * 10000000.0f;
 		// The altitude is the same as the altitude of the last waypoint mission
 		loc_hwp3.alt = land_wp.alt;
 		loc_hwp3.flags.relative_alt = 1;
@@ -286,12 +345,7 @@ void AP_HeadWindLanding::generate_hw_waypoints(const AP_Mission::Mission_Command
 		if(loiter_radius < MIN_RADIUS_DURING_LOITER)
 			loiter_radius = MIN_RADIUS_DURING_LOITER;
 
-		if(loiter_radius > MAX_RADIUS_DURING_LOITER)
-			loiter_radius = MAX_RADIUS_DURING_LOITER;
-
 		hwp3.p1 = (uint16_t)loiter_radius;
-
-		// Add the new command to the mission
 
 		hwp2 = last_mwp;
 		hwp2.id = MAV_CMD_NAV_WAYPOINT;
@@ -304,6 +358,14 @@ void AP_HeadWindLanding::generate_hw_waypoints(const AP_Mission::Mission_Command
 		hwp1 = last_mwp;
 		hwp1.id = MAV_CMD_NAV_WAYPOINT;
 		hwp1.content.location = loc_hwp1;
+
+		hwp4.content.location.lat = -1;
+		hwp4.content.location.lng = -1;
+
+		// Before adding the HWP waypoints to the mission, we need to check if the segment connecting the last mission waypoint
+		// and the farthest HWP waypoint (LTA) intersect the no landing zone. If yes, we need to add one more waypoint. This fourth
+		// waypoint is a mirror of the last mission waypoint w.r.t to the landing waypoint.
+		// TODO: Finish implementation
 
 		if(hwp_enabled)
 		{
@@ -324,13 +386,128 @@ void AP_HeadWindLanding::generate_hw_waypoints(const AP_Mission::Mission_Command
 
 }
 
-
-
 void AP_HeadWindLanding::update_num_commands()
 {
     // num_cmd is updated with the total number of commands after adding the virtual waypoints
     if(hwp_status > HWP_INITIALIZED)
 	num_cmd = _mission.num_commands();
+}
+
+bool AP_HeadWindLanding::check_crossing_no_landing_zone(MC &last_mwp, MC &land_wp, MC &lta_wp, float begin_area, float end_area)
+{
+	// Segment connecting the last mission waypoint and the loiter to altitude waypoint
+	Vector2l LMWP(last_mwp.content.location.lat,last_mwp.content.location.lng);
+	Vector2l LTA(lta_wp.content.location.lat,lta_wp.content.location.lng);
+
+	// Semi-line starting from the landing waypoint and going through the left border of the no landing area (beginning of the no landing area)
+	int32_t B_LAT = hwp_radius * cos(begin_area*M_PI/180.0);
+	int32_t B_LNG = hwp_radius * sin(begin_area*M_PI/180.0);
+
+	Vector2l BEGIN_NO_LANDING_AREA(B_LAT,B_LNG);
+	Vector2l LANDWP(land_wp.content.location.lat,land_wp.content.location.lng);
+
+	// Semi-line starting from the landing waypoint and going through the right border of the no landing area (end of the no landing area)
+	int32_t E_LAT = hwp_radius * cos(begin_area*M_PI/180.0);
+	int32_t E_LNG = hwp_radius * sin(begin_area*M_PI/180.0);
+
+	Vector2l END_NO_LANDING_AREA(E_LAT,E_LNG);
+
+	return true;
+}
+
+// http://ptspts.blogspot.de/2010/06/how-to-determine-if-two-line-segments.html
+// https://www.geeksforgeeks.org/check-if-two-given-line-segments-intersect/
+bool AP_HeadWindLanding::IsOnSegment(double xi, double yi, double xj, double yj, double xk, double yk)
+{
+	return (xi <= xk || xj <= xk) && (xk <= xi || xk <= xj) && (yi <= yk || yj <= yk) && (yk <= yi || yk <= yj);
+}
+
+char AP_HeadWindLanding::ComputeDirection(double xi, double yi, double xj, double yj, double xk, double yk)
+{
+	double a = (xk - xi) * (yj - yi);
+	double b = (xj - xi) * (yk - yi);
+	return a < b ? -1 : a > b ? 1 : 0;
+}
+
+bool AP_HeadWindLanding::DoLineSegmentsIntersect(double x1, double y1, double x2, double y2, double x3, double y3, double x4, double y4)
+{
+	// Not yet implemented
+	return false;
+}
+
+float AP_HeadWindLanding::calc_theta_hwp(float theta_wind, MC &last_mwp, MC &land_wp)
+{
+	// If we didn't set-up a no landing area around the landing point
+	// I will generate the HWP 180 degrees against the wind direction.
+	if(!is_no_landing_area_set)
+	{
+		return theta_wind;
+	}
+	// The no landing area is set. Check if the wind blows towards the no landing area.
+	else
+	{
+
+		// The actual no landing area is bigger than the one configured on mission planner
+		// since we need to consider that also the radius of the loitering to altitude cannot cross this area
+
+		// gcs().send_text(MAV_SEVERITY_NOTICE, "3. begin/end initial %f %f",begin_no_landing_area,end_no_landing_area);
+
+		float extra_area = sector_dimension_from_chord(hwp_radius,loiter_radius)*180.0/M_PI;
+
+		float begin_ext_no_landing_area = begin_no_landing_area - extra_area;
+		float end_ext_no_landing_area = end_no_landing_area + extra_area;
+
+		if(is_angle_between(begin_ext_no_landing_area,end_ext_no_landing_area,theta_wind))
+		{
+
+			// TO DO: Implement this: https://math.stackexchange.com/questions/1766285/is-there-a-formula-that-finds-middle-between-two-angles
+			float theta_between = begin_ext_no_landing_area + (end_ext_no_landing_area-begin_ext_no_landing_area)/2.0;
+			float divider = theta_between + 180.0f;
+
+			// Is the wind vector closer to the begin or the end of the non landing zone?
+
+			float diff_begin = fabs(difference_between_angles(theta_wind,begin_ext_no_landing_area));
+			float diff_end = fabs(difference_between_angles(theta_wind,end_ext_no_landing_area));
+
+			// gcs().send_text(MAV_SEVERITY_CRITICAL, "diff: %f, %f, %f, %f",theta_between,divider,diff_begin,diff_end);
+
+			return diff_begin < diff_end ? begin_ext_no_landing_area : end_ext_no_landing_area;
+
+		}
+		// If the no landing area is set but we are outside, then everything is fine
+		else
+		{
+			// gcs().send_text(MAV_SEVERITY_NOTICE, "20. Outside the no landing area");
+			return theta_wind;
+		}
+	}
+}
+
+// https://www.codeproject.com/Articles/59789/Calculate-the-real-difference-between-two-angles-k
+float AP_HeadWindLanding::difference_between_angles(float first, float second)
+{
+    float difference = second - first;
+    if (difference < -180) difference += 360;
+    if (difference > 180) difference -= 360;
+    return difference;
+}
+
+// https://math.stackexchange.com/questions/1044905/simple-angle-between-two-angles-of-circle
+bool AP_HeadWindLanding::is_angle_between(float start, float end, float mid)
+{
+    end = (end - start) < 0.0f ? end - start + 360.0f : end - start;
+    mid = (mid - start) < 0.0f ? mid - start + 360.0f : mid - start;
+    return (mid < end);
+}
+
+float AP_HeadWindLanding::sector_dimension_from_chord(float radius, float chord)
+{
+	// The HWP radius cannot be less than 50 meter: the dynamic and the expected velocity during transition
+	// doesn't allow to have such short distance.
+	if(radius < MIN_RADIUS_HEADINGWIND_WAYPOINT)
+		radius = MIN_RADIUS_HEADINGWIND_WAYPOINT;
+
+	return 2.0*asin(chord/(4.0*radius));
 }
 
 void AP_HeadWindLanding::restore_mission()

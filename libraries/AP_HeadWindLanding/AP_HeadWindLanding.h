@@ -1,8 +1,9 @@
 /*
  * AP_HeadWindLanding.h
  *
- *  Created on: Nov 1, 2017
- *      Author: Alessandro Benini
+ * Created on: Nov 1, 2017
+ *     Author: Alessandro Benini
+ *    Company: Germandrones GmbH
  */
 
 #ifndef _APHEADWINDLANDING_H
@@ -11,6 +12,8 @@
 #include <AP_Mission/AP_Mission.h>
 #include <GCS_MAVLink/GCS_MAVLink.h>
 #include <AP_AHRS/AP_AHRS_NavEKF.h>
+
+#include <AP_Math/vector2.h>
 
 // Macro for converting the latitude and longitude back to decimal representation
 #define TO_DEG_FORMAT 1.0e-7f
@@ -34,6 +37,9 @@ typedef enum vwp_error_states {
 	HWP_LAST_MISSION_WP_NOT_FOUND,
 	HWP_INDEX_NOT_FOUND
 } hwp_error_status_t;
+
+// typedef just to avoid the long name
+typedef AP_Mission::Mission_Command MC;
 
 class AP_HeadWindLanding
 {
@@ -65,7 +71,7 @@ public:
     void calc_index_hw_waypoints();
 
     /// generate_hw_waypoints - generates the virtual waypoints based on the current settings and the wind direction.
-    void generate_hw_waypoints(const AP_Mission::Mission_Command& cmd);
+    void generate_hw_waypoints(const MC& cmd);
 
     /// update_num_commands - updates the variable containing the number of commands in the mission. This function is called after
     /// the addition and removal of the virtual waypoints.
@@ -77,7 +83,7 @@ public:
     void restore_mission();
 
     // Get methods
-    bool		is_hwp_enabled()			{ return hwp_enabled; }
+    bool		is_hwp_enabled()			{ return hwp_enabled && !hwp_mav_cmd_present; }
     AP_Float 	get_heading_wind()			{ return heading_wind; }
     AP_Float 	get_hwp_spd()				{ return hwp_spd; }
 
@@ -99,10 +105,14 @@ public:
     AP_Mission::Mission_Command get_hwp1() 	{ return hwp1; }
     AP_Mission::Mission_Command get_hwp2()	{ return hwp2; }
     AP_Mission::Mission_Command get_hwp3() 	{ return hwp3; }
+    AP_Mission::Mission_Command get_hwp4() 	{ return hwp4; }
+
     // AP_Mission::Mission_Command get_reduce_speed() { return reduce_speed; }
 
     void		enable()					{ hwp_enabled = 1; }
     void		disable()					{ hwp_enabled = 0; }
+    void		temporarily_disable()		{ hwp_mav_cmd_present = 1; }
+    void 		temporarily_enable()        { hwp_mav_cmd_present = 0; }
 
     // Status variables
     hwp_status_t hwp_status;
@@ -114,20 +124,62 @@ public:
 protected:
 
     AP_Int8  hwp_enabled;
+    AP_Int8	 hwp_mav_cmd_present;
     AP_Int16 hwp_radius;
     AP_Float heading_wind;
     AP_Float hwp_spd;
 
     AP_Int16 loiter_radius;
+    AP_Int16 waypoint_radius; // waypoint radius during landing sequence
 
     AP_Float dist_hwpl_1;
     AP_Float dist_hwpl_2;
     AP_Float dist_hwpl_3;
 
+    // The following variables describes the beginning and the end of the forbidden area where the HWP
+    // cannot be generated. The areas is described as the sector of the circle centered in the landing point.
+    // The begin_forbidden_area and end_forbidden_area variables represent the angles from the North axis
+    // using the NED frame.
+    bool is_no_landing_area_set;
+    float begin_no_landing_area;
+    float offset_no_landing_area;
+    float end_no_landing_area;
+
 private:
 
     // Returns true if all the conditions for generating the HeadWind waypoints are met.
+    // all_conditions_satisfied() - returns true if all the conditions for generating the HeadWind waypoints are met.
     bool all_conditions_satisfied();
+
+    // is_disable_HWP_command_present() - returns true if the mission doesn't contains the MAV_CMD_DO_DISABLE_HWP
+    // for temporarily disable the mission
+    bool is_disable_HWP_command_present();
+
+    // check_forbidden_area - checks if the user set a no landing area where the HWP should not be generated
+    void check_no_landing_area_defined(void);
+
+    // sector_dimension_from_chord() - returns the size of the circular sector specifying the radius of the circle
+    // and the lenght of the chord. This functions is used to see how far from the forbidden area we must stay considering
+    // the space required by the UAV for performing the loiter to altitude.
+    float sector_dimension_from_chord(float radius, float chord);
+
+    // is_angle_between() - checks if an angle is between two angles
+    bool is_angle_between(float start, float end, float mid);
+
+    // difference_between_angles() - calculates the difference between two angles
+    float difference_between_angles(float first, float second);
+
+    // calc_theta_hwp() - calculates the direction of the HWP based on the forbidden zone
+    float calc_theta_hwp(float theta_wind, MC &last_mwp, MC &land_wp);
+
+    bool check_crossing_no_landing_zone(MC &last_mwp, MC &land_wp, MC &lta_wp, float begin_area, float end_area);
+
+    bool IsOnSegment(double xi, double yi, double xj, double yj,double xk, double yk);
+    char ComputeDirection(double xi, double yi, double xj, double yj, double xk, double yk);
+    bool DoLineSegmentsIntersect(double x1, double y1, double x2, double y2, double x3, double y3, double x4, double y4);
+
+    // does_segments_intersect() - checks if two segments intersect. The segments are passed specifying the Point
+    bool does_segments_intersects(Vector2l &P1, Vector2l &P2, Vector2l &P3, Vector2l &P4);
 
     typedef struct {
       // The following variable set the point in the mission where the virtual waypoints are generated.
@@ -154,6 +206,8 @@ private:
     AP_Mission::Mission_Command hwp1;
     AP_Mission::Mission_Command hwp2;
     AP_Mission::Mission_Command hwp3;
+    AP_Mission::Mission_Command hwp4;
+
     // AP_Mission::Mission_Command reduce_speed;
 
     AP_Mission&		_mission;

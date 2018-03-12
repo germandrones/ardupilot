@@ -332,6 +332,7 @@ void Plane::update_sensor_status_flags(void)
 
     if (plane.DataFlash.logging_failed()) {
         control_sensors_health &= ~MAV_SYS_STATUS_LOGGING;
+        gcs().send_text(MAV_SEVERITY_INFO,"ERROR: LOGGING STOPPED WORKING");
     }
 
     if (millis() - failsafe.last_valid_rc_ms < 200) {

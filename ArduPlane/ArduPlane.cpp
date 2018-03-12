@@ -33,8 +33,6 @@
 
 #endif
 
-bool hwp_status_printed = false;
-
 /*
   scheduler table - all regular tasks are listed here, along with how
   often they should be called (in Hz) and the maximum time
@@ -329,17 +327,6 @@ void Plane::update_aux(void)
 void Plane::one_second_loop()
 {
 
-    if(!hwp_status_printed)
-    {
-
-		if(headwind_wp.is_hwp_enabled())
-			gcs().send_text(MAV_SEVERITY_NOTICE, "VWP enabled");
-		else
-			gcs().send_text(MAV_SEVERITY_NOTICE, "VWP disabled");
-
-			hwp_status_printed = true;
-	}
-
 #ifdef HW_TEST
 
 	if(headwind_wp.is_hwp_enabled())
@@ -347,7 +334,7 @@ void Plane::one_second_loop()
 		one_sec_cnt += 1;
 
 		// After 60 seconds from the startup, the virtual waypoints will be added
-		if(one_sec_cnt > 60 && !mission_rewrote)
+		if(one_sec_cnt > 40 && !mission_rewrote)
 		{
 			gcs().send_text(MAV_SEVERITY_NOTICE, "Calling Mission Rewrite function");
 			one_time_rewrite();
@@ -355,7 +342,7 @@ void Plane::one_second_loop()
 		}
 
 		// The following section is used for restoring the original mission
-		if(one_sec_cnt > 120 && !mission_restored)
+		if(one_sec_cnt > 80 && !mission_restored)
 		{
 			gcs().send_text(MAV_SEVERITY_NOTICE, "Calling Mission Restore function");
 			one_time_restore();

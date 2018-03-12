@@ -1,3 +1,11 @@
+/*
+ * AP_MissionCheck_VWP.cpp
+ *
+ * Created on: December 12, 2017
+ *     Author: Alessandro Benini
+ *    Company: Germandrones GmbH
+ */
+
 #include <stdio.h>
 
 #include "AP_MissionCheck_HWP.h"
@@ -39,9 +47,6 @@ bool MissionCheck_HWP::check()
 		logInfo(msg);
     }
     
-    asprintf(&msg,"Num Nav WP: %d",get_num_nav_wayponts());
-    logInfo(msg);
-    
     if(get_num_nav_wayponts() < 3)
     {
 		hwp_feature_usable = false;
@@ -51,4 +56,10 @@ bool MissionCheck_HWP::check()
     
     return hwp_feature_usable;
   
+}
+
+bool MissionCheck_HWP::is_landing_sequence_present()
+{
+	// Placeholder
+	return true;
 }

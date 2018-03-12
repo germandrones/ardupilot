@@ -1,3 +1,10 @@
+/*
+ * MissionCheck.h
+ *
+ * Created on: December 12, 2017
+ *     Author: Alessandro Benini
+ *    Company: Germandrones GmbH
+ */
 #ifndef MISSIONCHECK_H_
 #define MISSIONCHECK_H_
 
