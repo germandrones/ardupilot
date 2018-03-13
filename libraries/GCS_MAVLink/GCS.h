@@ -111,6 +111,8 @@ public:
     virtual void packetReceived(const mavlink_status_t &status,
                                 mavlink_message_t &msg);
 
+    bool is_mission_uploaded() { return mission_uploaded; }
+
     // accessor for uart
     AP_HAL::UARTDriver *get_uart() { return _port; }
 
@@ -327,6 +329,8 @@ protected:
     void send_hwstatus();
 
 private:
+
+    bool mission_uploaded;
 
     float       adjust_rate_for_stream_trigger(enum streams stream_num);
 

@@ -170,6 +170,12 @@ public:
         int8_t sec_utc; // absolute time's sec (utc)
     };
 
+    // Structure for defining the area where the the HWP cannot be generated
+    struct PACKED ForbiddenZone {
+        int16_t begin_area_sector;
+        int16_t offset;
+    };
+
     // DO_ENGINE_CONTROL support
     struct PACKED Do_Engine_Control {
         bool start_control; // start or stop engine
@@ -248,6 +254,9 @@ public:
         // location
         Location location;      // Waypoint location
 
+        // Area where the HWP cannot be defined
+        ForbiddenZone forbidden_zone;
+
         // raw bytes, for reading/writing to eeprom. Note that only 10 bytes are available
         // if a 16 bit command ID is used
         uint8_t bytes[12];
@@ -257,7 +266,7 @@ public:
     struct Mission_Command {
         uint16_t index;             // this commands position in the command list
         uint16_t id;                // mavlink command id
-        uint16_t p1;                // general purpose parameter 1
+        uint16_t p1;               // general purpose parameter 1
         Content content;
     };
 
@@ -378,6 +387,9 @@ public:
     ///     returns true if found, false if not found (i.e. reached end of mission command list)
     ///     accounts for do_jump commands
     bool get_next_nav_cmd(uint16_t start_index, Mission_Command& cmd);
+
+    /// get_command_id - gets the ID of the current command
+    uint16_t get_command_id(uint16_t index);
 
     /// get the ground course of the next navigation leg in centidegrees
     /// from 0 36000. Return default_angle if next navigation

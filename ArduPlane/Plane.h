@@ -120,6 +120,7 @@
 #include <SITL/SITL.h>
 #endif
 
+// #define HW_TEST 1
 
 /*
   a plane specific AP_AdvancedFailsafe class
@@ -812,7 +813,7 @@ private:
 		int32_t flight_mode;
 		bool msg_processed:1;
 
-		_status():err_num(-1),msg_processed(false),flight_mode(-1)
+		_status():err_num(-1),msg_processed(true),flight_mode(-1)
 		{
 			strcpy(err_msg,"GDPILOT IS INITIALIZING");
 		}

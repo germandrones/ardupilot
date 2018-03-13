@@ -805,6 +805,16 @@ MAV_MISSION_RESULT AP_Mission::mavlink_int_to_mission_cmd(const mavlink_mission_
         cmd.content.set_yaw_speed.relative_angle = packet.param3;   // 0 = absolute angle, 1 = relative angle
         break;
 
+    case MAV_CMD_DO_DISABLE_HWP:
+    	// TODO: Check what to do here
+    	cmd.p1 = packet.param1;
+    	break;
+
+    case MAV_CMD_SET_FORBIDDEN_ZONE:
+    	cmd.content.forbidden_zone.begin_area_sector = packet.param1;
+    	cmd.content.forbidden_zone.offset = packet.param2;
+    	break;
+
     default:
         // unrecognised command
         return MAV_MISSION_UNSUPPORTED;
@@ -1261,6 +1271,15 @@ bool AP_Mission::mission_cmd_to_mavlink_int(const AP_Mission::Mission_Command& c
         packet.param3 = cmd.content.set_yaw_speed.relative_angle;   // 0 = absolute angle, 1 = relative angle
         break;
 
+    case MAV_CMD_DO_DISABLE_HWP:
+     	packet.param1 = cmd.p1;
+        break;
+
+    case MAV_CMD_SET_FORBIDDEN_ZONE:
+		packet.param1 = cmd.content.forbidden_zone.begin_area_sector;
+		packet.param2 = cmd.content.forbidden_zone.offset;
+		break;
+
     default:
         // unrecognised command
         return false;
@@ -1440,6 +1459,15 @@ void AP_Mission::advance_current_do_cmd()
         // set flag to stop unnecessarily searching for do commands
         _flags.do_cmd_all_done = true;
     }
+}
+
+/// get_command_id - gets the ID of the current command
+uint16_t AP_Mission::get_command_id(uint16_t index)
+{
+	Mission_Command temp_cmd;
+	get_next_cmd(index, temp_cmd, false);
+
+	return temp_cmd.id;
 }
 
 /// get_next_cmd - gets next command found at or after start_index

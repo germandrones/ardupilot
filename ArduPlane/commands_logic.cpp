@@ -211,6 +211,15 @@ bool Plane::start_command(const AP_Mission::Mission_Command& cmd)
         do_digicam_control(cmd);
         break;
 
+    case MAV_CMD_DO_DISABLE_HWP:
+    	// The HWP feature is enabled by default. If I receive this mission item, it means that
+    	// the HWP feature has to be disabled.
+    	// plane.headwind_wp.disable();
+    	break;
+
+    case MAV_CMD_SET_FORBIDDEN_ZONE:
+    	break;
+
     case MAV_CMD_DO_SET_CAM_TRIGG_DIST:
         camera.set_trigger_distance(cmd.content.cam_trigg_dist.meters);
         break;
@@ -332,7 +341,7 @@ bool Plane::verify_command(const AP_Mission::Mission_Command& cmd)        // Ret
         // assume parachute was released successfully
         return true;
 #endif
-        
+
     // do commands (always return true)
     case MAV_CMD_DO_CHANGE_SPEED:
     case MAV_CMD_DO_SET_HOME:
@@ -352,6 +361,8 @@ bool Plane::verify_command(const AP_Mission::Mission_Command& cmd)        // Ret
     case MAV_CMD_DO_MOUNT_CONTROL:
     case MAV_CMD_DO_VTOL_TRANSITION:
     case MAV_CMD_DO_ENGINE_CONTROL:
+    case MAV_CMD_DO_DISABLE_HWP: // command for disabling the HWP feature form Mission Planner / Flight plan tab
+    case MAV_CMD_SET_FORBIDDEN_ZONE:
         return true;
 
     default:

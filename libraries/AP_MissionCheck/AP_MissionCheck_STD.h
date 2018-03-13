@@ -1,8 +1,9 @@
 /*
  * AP_MissionCheck_STD.h
  *
- *  Created on: December 12, 2017
- *      Author: Alessandro Benini
+ * Created on: December 12, 2017
+ *     Author: Alessandro Benini
+ *    Company: Germandrones GmbH
  */
 
 #ifndef AP_MISSIONCHECK_STD_H_
@@ -27,6 +28,7 @@ public:
 private:
     
     bool std_mission_usable;
+    bool is_landing_sequence_present();
   
 };
 
