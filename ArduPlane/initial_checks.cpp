@@ -10,13 +10,15 @@
 
 // This function performs the initial checks when the ArmingRequired parameter is set to YES_GDPILOT
 // Only the GDPilot is allowed to arm the UAV. This is very critical.
-// !!!WE MUST ABSOLUTELY SURE THAT THE UAV IS NOT FLYING!!!
+// !!!WE MUST BE ABSOLUTELY SURE THAT THE UAV IS NOT FLYING!!!
 void Plane::initial_checks()
 {
 
 	// We have a new message from GDPilot that has not been processed
 	if(!plane.gd_status.msg_processed)
 	{
+		gcs().send_text(MAV_SEVERITY_CRITICAL, "MESSAGE ARRIVED. ID: %d",plane.gd_status.err_num);
+
 		// Special cases for DISARM cmd message and UAV ARMED notification message
 		if(plane.gd_status.err_num == 127)
 		{
@@ -40,6 +42,16 @@ void Plane::initial_checks()
 		// For every other message we need to be in disarmed state and not flying
 		else
 		{
+			if(arming.is_armed())
+				gcs().send_text(MAV_SEVERITY_CRITICAL, "A: UAV IS ARMED");
+			else
+				gcs().send_text(MAV_SEVERITY_CRITICAL, "A: UAV IS DISARMED");
+
+			if(plane.is_flying())
+				gcs().send_text(MAV_SEVERITY_CRITICAL, "A: UAV IS FLYING");
+			else
+				gcs().send_text(MAV_SEVERITY_CRITICAL, "A: UAV IS NOT FLYING");
+
 			if(!arming.is_armed() && plane.is_flying() == false)
 			{
 				switch(plane.gd_status.err_num)
@@ -61,11 +73,13 @@ void Plane::initial_checks()
 						{
 							// I allow the UAV to arm
 							bool success = arming.arm(AP_Arming::GDPILOT);
+							gcs().send_text(MAV_SEVERITY_CRITICAL, "PIXHAWK ARMED. MODE: GDPILOT");
 
 							if(success)
 							{
-								// Here we send the acknowledge to the GDPIlot board.
+								// Here we send the acknowledge to the GDPilot board.
 								ack_to_gdpilot_must_be_sent = true;
+								gcs().send_text(MAV_SEVERITY_CRITICAL, "PIXHAWK READY");
 							}
 							else
 							{
