@@ -20,7 +20,7 @@ void Plane::initial_checks()
 		gcs().send_text(MAV_SEVERITY_CRITICAL, "MESSAGE ARRIVED. ID: %d",plane.gd_status.err_num);
 
 		// Special cases for DISARM cmd message and UAV ARMED notification message
-		if(plane.gd_status.err_num == 127)
+		if(plane.gd_status.err_num == 120)
 		{
 			gcs().send_text(MAV_SEVERITY_CRITICAL, "UAV DISARMED");
 
