@@ -195,7 +195,6 @@ void Plane::send_hwp_message(mavlink_channel_t chan)
 	int32_t hwp_lng4 = hwp4.content.location.lng;
 
 	mavlink_msg_hwp_send(chan, hwp_lat1,hwp_lng1,hwp_lat2,hwp_lng2,hwp_lat3,hwp_lng3,hwp_lat4,hwp_lng4);
-	plane.headwind_wp.is_hwp_sent = true;
 	//gcs().send_text(MAV_SEVERITY_NOTICE, "HWP is sent");
 }
 
@@ -1079,7 +1078,7 @@ GCS_MAVLINK_Plane::data_stream_send(void)
         send_message(MSG_LANDING);
 
         // Send HWP Message if Generated and still not sent
-        if(plane.headwind_wp.hwp_status == HWP_GENERATED && plane.headwind_wp.is_hwp_sent == false)
+        if(plane.headwind_wp.hwp_status == HWP_GENERATED && plane.headwind_wp.is_hwp_received == false)
         {
         	send_message(MSG_HWP);
         }
@@ -2187,7 +2186,6 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
 			//gcs().send_text(MAV_SEVERITY_NOTICE, "GD MSG: %d, %s",plane.gd_status.err_num,plane.gd_status.err_msg);
         }
     	break;
-
     // Special case for mission items to see if we need to enable/disable the HWP feature
     case MAVLINK_MSG_ID_MISSION_ITEM:
     case MAVLINK_MSG_ID_MISSION_ITEM_INT:
@@ -2222,6 +2220,14 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
 		}
 
 		break;
+    // get responce message from GCS
+    case MAVLINK_MSG_ID_HWP:
+    {
+	    gcs().send_text(MAV_SEVERITY_NOTICE, "HWP ECHO RECEIVED");
+        
+        plane.headwind_wp.ack_echo_received();
+        break;
+    }
 
     default:
         handle_common_message(msg);

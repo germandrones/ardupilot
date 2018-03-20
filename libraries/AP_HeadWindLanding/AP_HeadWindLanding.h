@@ -117,8 +117,9 @@ public:
     // Status variables
     hwp_status_t hwp_status;
     hwp_error_status_t hwp_error;
-    bool is_hwp_sent = false;
-
+    
+    bool is_hwp_received = false;
+    void ack_echo_received(){ is_hwp_received = true; }
 
 protected:
 

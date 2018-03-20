@@ -516,6 +516,14 @@ void Plane::do_land(const AP_Mission::Mission_Command& cmd)
 
     gcs_send_hwp_info(cmd);
 
+    // Since the GDPilot takes care of the landing phase, after issuing the landing command,
+    // PixHawk would just need to re-set its internal state for a new mission.
+    // Since the set_mode doesn't do anything if we keep the same flight mode, here we change it to MANUAL
+    if (control_mode == AUTO) {
+    	set_mode(MANUAL, MODE_REASON_MISSION_END);
+        gcs().send_text(MAV_SEVERITY_INFO, "STARTED LANDING PROCEDURE");
+    }
+
     // ========================================================================================
     // After issuing the landing cmd the mission is restored to its original state
 

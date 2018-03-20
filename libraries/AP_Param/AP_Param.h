@@ -384,6 +384,9 @@ public:
         _frame_type_flags |= flags_to_set;
     }
 
+    // returns parameter hash checksum
+    static uint32_t param_hash_check(void);
+
     // check if a given frame type should be included
     static bool check_frame_type(uint16_t flags);
     
