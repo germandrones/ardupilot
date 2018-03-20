@@ -21,6 +21,10 @@ void Plane::initial_checks()
 
 			arming.disarm();
 			AP_Notify::flags.armed = false;
+
+			// Since the GDPilot takes care of the landing phase, after issuing the landing command,
+			// PixHawk would just need to re-set its internal state for a new mission.
+			mission.start();
 		}
 		// This is sent by GDPilot after the PixHawk sends the acknowledge
 		// to let the user mnow that everything is fine (the main led becomes solid blue)
