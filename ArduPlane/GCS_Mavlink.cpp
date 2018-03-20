@@ -580,7 +580,7 @@ bool GCS_MAVLINK::is_message_nesesary_for_np(enum ap_message id)
 		case MSG_AOA_SSA:
 		case MSG_LANDING:
 		case MSG_NAMED_FLOAT:
-		case MSG_HWP:
+        case MSG_HWP:
 		case MSG_LAST:
 
 			return false;
@@ -648,7 +648,7 @@ bool GCS_MAVLINK_Plane::try_send_message(enum ap_message id)
 		CHECK_PAYLOAD_SIZE(HWP);
 		plane.send_hwp_message(chan);
 		break;
-
+    
 	case MSG_LOCATION_NEITZKE:
 		if (!neitzkePilot_detected)
 			break;
@@ -1014,7 +1014,7 @@ GCS_MAVLINK_Plane::data_stream_send(void)
         if(plane.headwind_wp.hwp_status == HWP_GENERATED && plane.headwind_wp.is_hwp_received == false)
         {
         	send_message(MSG_HWP);
-        }
+        }        
     }
 
     if (gcs().out_of_time()) return;
@@ -2105,6 +2105,22 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
         plane.headwind_wp.ack_echo_received();
         break;
     }
+
+    case MAVLINK_MSG_ID_LOG_INFO_REQUEST:
+    {
+        mavlink_log_info_request_t msg_file_id;
+        mavlink_msg_log_info_request_decode(msg,&msg_file_id);
+        if(msg_file_id.id != 0)
+        {
+            gcs().send_text(MAV_SEVERITY_NOTICE, "GD Log Filename: LOG%05u.bin", msg_file_id.id);
+            gcs().send_text(MAV_SEVERITY_NOTICE, "PX Log Filename: %08u.bin", plane.DataFlash.find_last_log());
+            
+            char gitHash[40];
+            strncpy(gitHash, msg_file_id.gitHash, 40);
+            gcs().send_text(MAV_SEVERITY_NOTICE, "SongbirdGD-3.8.0 (%.8s)", msg_file_id.gitHash);
+        }
+    }
+
     // Special case for mission items to see if we need to enable/disable the HWP feature
     case MAVLINK_MSG_ID_MISSION_ITEM:
     case MAVLINK_MSG_ID_MISSION_ITEM_INT:
