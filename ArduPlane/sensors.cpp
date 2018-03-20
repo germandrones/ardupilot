@@ -9,7 +9,7 @@ void Plane::init_barometer(bool full_calibration)
     } else {
         barometer.update_calibration();
     }
-    gcs().send_text(MAV_SEVERITY_INFO, "Barometer calibration complete");
+    gcs().send_text(MAV_SEVERITY_INFO, "Baro. cal. complete %fPa %fm", barometer.get_ground_pressure(), barometer.get_altitude());
 }
 
 void Plane::init_rangefinder(void)

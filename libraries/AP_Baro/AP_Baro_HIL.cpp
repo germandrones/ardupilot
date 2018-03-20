@@ -53,9 +53,14 @@ void AP_Baro::setHIL(float altitude_msl)
     float p = p0 * delta;
     float T = 303.16f * theta - 273.16f; // Assume 30 degrees at sea level - converted to degrees Kelvin
 
+
+//    setHIL(_primary, p, T, altitude_msl, 0, AP_HAL::millis());
+
     _hil.pressure = p;
     _hil.temperature = T;
     _hil.updated = true;
+    sensors[0].healthy = true;
+    drivers[0]->update();
 }
 
 /*
@@ -78,6 +83,8 @@ void AP_Baro::setHIL(uint8_t instance, float pressure, float temperature, float 
         _hil.last_update_ms = last_update_ms;
         _hil.have_last_update = true;
     }
+    sensors[instance].healthy = true;
+    drivers[instance]->update();
 }
 
 // Read the sensor

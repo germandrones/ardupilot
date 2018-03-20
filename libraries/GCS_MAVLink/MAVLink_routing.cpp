@@ -117,6 +117,11 @@ bool MAVLink_routing::check_and_forward(mavlink_channel_t in_channel, const mavl
         return true;
     }
 
+    if (msg->msgid == MAVLINK_MSG_ID_HIL_STATE) {
+        _mavlink_resend_uart(MAVLINK_COMM_2, msg); // forward to GD pilot
+		return true; // no automatic forward
+    }
+
     // extract the targets for this packet
     int16_t target_system = -1;
     int16_t target_component = -1;

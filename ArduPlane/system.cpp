@@ -561,7 +561,8 @@ void Plane::startup_INS_ground(void)
 {
 #if HIL_SUPPORT
     if (g.hil_mode == 1) {
-        while (barometer.get_last_update() == 0) {
+//    	barometer.set_hil_mode();
+        while (barometer.get_last_update() == 0 ) {
             // the barometer begins updating when we get the first
             // HIL_STATE message
             gcs().send_text(MAV_SEVERITY_WARNING, "Waiting for first HIL_STATE message");

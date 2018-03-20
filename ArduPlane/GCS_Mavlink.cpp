@@ -2,6 +2,15 @@
 
 #include "Plane.h"
 
+/*
+  keep last HIL_STATE message to allow sending SIM_STATE
+ */
+#if HIL_SUPPORT
+static mavlink_hil_state_t last_hil_state;
+static int hilFreq=0, hilCounter=0;
+static uint32_t hilFreqTimer=0;
+#endif
+
 void Plane::send_heartbeat(mavlink_channel_t chan)
 {
     uint8_t base_mode = MAV_MODE_FLAG_CUSTOM_MODE_ENABLED;
@@ -149,7 +158,6 @@ void Plane::send_extended_status1(mavlink_channel_t chan)
     }
 
     update_sensor_status_flags();
-    
     mavlink_msg_sys_status_send(
         chan,
         control_sensors_present,
@@ -159,7 +167,7 @@ void Plane::send_extended_status1(mavlink_channel_t chan)
         battery.voltage() * 1000, // mV
         battery_current,        // in 10mA units
         battery_remaining,      // in %
-        0, // comm drops %,
+        hilFreq, // comm drops %,
         0, // comm drops in pkts,
         0, 0, 0, 0);
 }
@@ -207,41 +215,105 @@ void Plane::send_location_neitzke(mavlink_channel_t chan)
 	}
 	//const Vector3f &vel = gps.velocity();
 
-	// with EKF use filter status and ekf check
-	nav_filter_status filt_status = inertial_nav.get_filter_status();
+	if (g.hil_mode!=1) // no hil
+	{
+		// with EKF use filter status and ekf check
+		nav_filter_status filt_status = inertial_nav.get_filter_status();
 
-	// once armed we require a good absolute position and EKF must not be in const_pos_mode
-	bool postion_ok = filt_status.flags.horiz_pos_abs && !filt_status.flags.const_pos_mode;
+		// once armed we require a good absolute position and EKF must not be in const_pos_mode
+		bool postion_ok = filt_status.flags.horiz_pos_abs && !filt_status.flags.const_pos_mode;
 
-	// NEU frame: returns the current position relative to the home location in cm.
-	const Vector3f& curr_pos = inertial_nav.get_position();
-	// NEU frame:
-	/*   @return velocity vector:
-	 *      	.x : latitude  velocity in cm/s
-	 * 			.y : longitude velocity in cm/s
-	 * 			.z : vertical  velocity in cm/s
-	 */
-	const Vector3f& curr_vel = inertial_nav.get_velocity();
+		// NEU frame: returns the current position relative to the home location in cm.
+		const Vector3f& curr_pos = inertial_nav.get_position();
+		// NEU frame:
+		/*   @return velocity vector:
+		 *      	.x : latitude  velocity in cm/s
+		 * 			.y : longitude velocity in cm/s
+		 * 			.z : vertical  velocity in cm/s
+		 */
+		const Vector3f& curr_vel = inertial_nav.get_velocity();
 
-	mavlink_msg_local_position_neitzke_send(
-			chan,
-			fix_time_ms,
-			postion_ok, // bool
-			curr_pos.x,                // cm
-			curr_pos.y,                // cm
-			curr_pos.z,         // cm
-			barometer.get_altitude() * 1.0e2f,     //altitude from baro, in cm
-			curr_vel.x,  // X speed cm/s (+ve North)
-			curr_vel.y,  // Y speed cm/s (+ve East)
-			curr_vel.z, // Z speed cm/s (+ve up)
-			ahrs.yaw_sensor,
-			(int8_t)plane.flight_stage);
+		mavlink_msg_local_position_neitzke_send(
+				chan,
+				fix_time_ms,
+				postion_ok, // bool
+				curr_pos.x,                // cm
+				curr_pos.y,                // cm
+				curr_pos.z,         // cm
+				barometer.get_altitude() * 1.0e2f,     //altitude from baro, in cm
+				curr_vel.x,  // X speed cm/s (+ve North)
+				curr_vel.y,  // Y speed cm/s (+ve East)
+				curr_vel.z, // Z speed cm/s (+ve up)
+				ahrs.yaw_sensor,
+				(int8_t)plane.flight_stage);
+	} else
+	{
+		Location ref, pos;
+		bool postion_ok;
+		Vector3f curr_pos_ned;
+
+		ref = plane.home;
+		postion_ok = gps.status() >= AP_GPS::GPS_OK_FIX_2D;
+		curr_pos_ned = location_3d_diff_NED(ref, plane.current_loc);
+
+		// NEU frame:
+		/*   @return velocity vector:
+		 *      	.x : latitude  velocity in cm/s
+		 * 			.y : longitude velocity in cm/s
+		 * 			.z : vertical  velocity in cm/s
+		 */
+		Vector3f curr_vel_ned;
+
+		curr_vel_ned = gps.velocity();
+
+		mavlink_msg_local_position_neitzke_send(
+				chan,
+				fix_time_ms,
+				postion_ok, // bool
+				curr_pos_ned.x*100,                // cm
+				curr_pos_ned.y*100,                // cm
+				-curr_pos_ned.z*100,         // cm
+				barometer.get_altitude() * 1.0e2f,     //altitude from baro, in cm
+				curr_vel_ned.x*100,  // X speed cm/s (+ve North)
+				curr_vel_ned.y*100,  // Y speed cm/s (+ve East)
+				-curr_vel_ned.z*100, // Z speed cm/s (+ve up)
+				ahrs.yaw_sensor,
+				(int8_t)plane.flight_stage);
+
+	}
 }
 
 void Plane::send_radio_out(mavlink_channel_t chan)
 {
 
-    mavlink_msg_servo_output_raw_send(
+	uint16_t throttle,ele, ail,rud;
+	SRV_Channels::get_output_pwm(SRV_Channel::k_throttle,throttle);
+	SRV_Channels::get_output_pwm(SRV_Channel::k_elevator,ele);
+	SRV_Channels::get_output_pwm(SRV_Channel::k_aileron, ail);
+	SRV_Channels::get_output_pwm(SRV_Channel::k_rudder,rud);
+
+	mavlink_msg_servo_output_raw_send(
+	        chan,
+			AP_HAL::micros(),
+	        0,     // port
+			ail,
+			ele,
+			throttle,
+			rud,
+	        hal.rcout->read(4),
+	        hal.rcout->read(5),
+	        hal.rcout->read(6),
+	        hal.rcout->read(7),
+	        hal.rcout->read(8),
+	        hal.rcout->read(9),
+	        hal.rcout->read(10),
+	        hal.rcout->read(11),
+	        hal.rcout->read(12),
+	        hal.rcout->read(13),
+	        hal.rcout->read(14),
+	        hal.rcout->read(15)
+		);
+/*	mavlink_msg_servo_output_raw_send(
         chan,
 		AP_HAL::micros(),
         0,     // port
@@ -261,7 +333,7 @@ void Plane::send_radio_out(mavlink_channel_t chan)
         hal.rcout->read(13),
         hal.rcout->read(14),
         hal.rcout->read(15)
-	);
+	);*/
 }
 
 void Plane::send_location(mavlink_channel_t chan)
@@ -364,12 +436,6 @@ void Plane::send_vfr_hud(mavlink_channel_t chan)
         (g2.soaring_controller.is_active() ? g2.soaring_controller.get_vario_reading() : barometer.get_climb_rate()));
 }
 
-/*
-  keep last HIL_STATE message to allow sending SIM_STATE
- */
-#if HIL_SUPPORT
-static mavlink_hil_state_t last_hil_state;
-#endif
 
 // report simulator state
 void Plane::send_simstate(mavlink_channel_t chan)
@@ -377,7 +443,7 @@ void Plane::send_simstate(mavlink_channel_t chan)
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
     sitl.simstate_send(chan);
 #elif HIL_SUPPORT
-    if (g.hil_mode == 1) {
+/*    if (g.hil_mode == 1) {
         mavlink_msg_simstate_send(chan,
                                   last_hil_state.roll,
                                   last_hil_state.pitch,
@@ -390,7 +456,7 @@ void Plane::send_simstate(mavlink_channel_t chan)
                                   last_hil_state.yawspeed,
                                   last_hil_state.lat,
                                   last_hil_state.lon);
-    }
+    }mlaiacker: not needed*/
 #endif
 }
 
@@ -686,10 +752,10 @@ bool GCS_MAVLINK_Plane::try_send_message(enum ap_message id)
 
     case MSG_SERVO_OUT:
 #if HIL_SUPPORT
-        if (plane.g.hil_mode == 1) {
+/*        if (plane.g.hil_mode == 1) {
             CHECK_PAYLOAD_SIZE(RC_CHANNELS_SCALED);
-            plane.send_servo_out(chan);
-        }
+            plane.send_servo_out(chan); // don't need to do that, GD pilot will do that
+        }*/
 #endif
         break;
 
@@ -707,7 +773,7 @@ bool GCS_MAVLINK_Plane::try_send_message(enum ap_message id)
     case MSG_SERVO_OUTPUT_RAW:
         CHECK_PAYLOAD_SIZE(SERVO_OUTPUT_RAW);
 #if HIL_SUPPORT
-        send_servo_output_raw(plane.g.hil_mode);
+//        send_servo_output_raw(plane.g.hil_mode);
 #else
         send_servo_output_raw(false);
 #endif
@@ -952,8 +1018,8 @@ GCS_MAVLINK_Plane::data_stream_send(void)
     if (gcs().out_of_time()) return;
 
     if (plane.in_mavlink_delay) {
-#if HIL_SUPPORT
-        if (plane.g.hil_mode == 1) {
+#if HIL_SUPPORT // mlaiacker: no need to do that, GD pilot will send output to simulator model
+/*        if (plane.g.hil_mode == 1) {
             // in HIL we need to keep sending servo values to ensure
             // the simulator doesn't pause, otherwise our sensor
             // calibration could stall
@@ -963,7 +1029,7 @@ GCS_MAVLINK_Plane::data_stream_send(void)
             if (stream_trigger(STREAM_RC_CHANNELS)) {
                 send_message(MSG_SERVO_OUTPUT_RAW);
             }
-        }
+        }*/
 #endif
         // don't send any other stream types while in the delay callback
         return;
@@ -978,7 +1044,7 @@ GCS_MAVLINK_Plane::data_stream_send(void)
         send_message(MSG_LOCATION_NEITZKE);
         if(plane.ack_to_gdpilot_must_be_sent)
         {
-        	// gcs().send_text(MAV_SEVERITY_INFO, "Sending ACK to GD");
+        	gcs().send_text(MAV_SEVERITY_INFO, "Sending ACK to GD");
         	send_message(MSG_ACK_GDPILOT);
         }
     }
@@ -1800,12 +1866,21 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
         if (plane.g.hil_mode != 1) {
             break;
         }
+        plane.failsafe.last_heartbeat_ms = AP_HAL::millis();
+        hilCounter++;
+        if((AP_HAL::millis()-hilFreqTimer)>=10000)
+        {
+        	hilFreq=hilCounter;
+        	hilCounter =0;
+        	hilFreqTimer = AP_HAL::millis();
+        }
 
         mavlink_hil_state_t packet;
         mavlink_msg_hil_state_decode(msg, &packet);
 
         // sanity check location
         if (!check_latlng(packet.lat, packet.lon)) {
+            gcs().send_text(MAV_SEVERITY_WARNING, "HIL_STATE lat lon error");
             break;
         }
 
@@ -1825,8 +1900,19 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
 
         plane.gps.setHIL(0, AP_GPS::GPS_OK_FIX_3D,
                          packet.time_usec/1000,
-                         loc, vel, 10, 0);
-
+                         loc, vel, 10, 3);
+        plane.gps.setHIL_Accuracy(0, 0.2, 0.2, 0.3, 0.4, true, AP_HAL::millis());
+/*
+        if(plane.home_is_set !=HOME_SET_AND_LOCKED)
+        {
+        	plane.ahrs.set_home(loc);
+        	plane.home_is_set = HOME_SET_AND_LOCKED;
+            gcs().send_text(MAV_SEVERITY_INFO, "Init HOME to %.6f %.6f at %um",
+                                    (double)(loc.lat*1.0e-7f),
+                                    (double)(loc.lng*1.0e-7f),
+                                    (uint32_t)(loc.alt*0.01f));
+        }
+*/
         // rad/sec
         Vector3f gyros;
         gyros.x = packet.rollspeed;
@@ -1835,9 +1921,9 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
 
         // m/s/s
         Vector3f accels;
-        accels.x = packet.xacc * GRAVITY_MSS*0.001f;
-        accels.y = packet.yacc * GRAVITY_MSS*0.001f;
-        accels.z = packet.zacc * GRAVITY_MSS*0.001f;
+        accels.x = (float)packet.xacc * GRAVITY_MSS*0.001f;
+        accels.y = (float)packet.yacc * GRAVITY_MSS*0.001f;
+        accels.z = (float)packet.zacc * GRAVITY_MSS*0.001f;
 
         plane.ins.set_gyro(0, gyros);
         plane.ins.set_accel(0, accels);
@@ -1852,6 +1938,9 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
              fabsf(packet.pitch - plane.ahrs.pitch) > ToRad(plane.g.hil_err_limit) ||
              wrap_PI(fabsf(packet.yaw - plane.ahrs.yaw)) > ToRad(plane.g.hil_err_limit))) {
             plane.ahrs.reset_attitude(packet.roll, packet.pitch, packet.yaw);
+            static uint16_t attiResetCount = 0;
+            attiResetCount++;
+            gcs().send_text(MAV_SEVERITY_DEBUG, "HIL reset atti %i", attiResetCount);
         }
 #endif
         break;

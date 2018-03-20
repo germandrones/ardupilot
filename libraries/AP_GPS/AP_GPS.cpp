@@ -1502,6 +1502,9 @@ void AP_GPS::calc_blended_state(void)
 }
 
 bool AP_GPS::is_healthy(uint8_t instance) const {
+    if (_type[instance] == GPS_TYPE_HIL) {
+    	return last_message_delta_time_ms(instance) < GPS_MAX_DELTA_MS;
+    }
     return drivers[instance] != nullptr &&
            last_message_delta_time_ms(instance) < GPS_MAX_DELTA_MS &&
            drivers[instance]->is_healthy();
