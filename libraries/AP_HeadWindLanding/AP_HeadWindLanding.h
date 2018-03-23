@@ -135,6 +135,7 @@ protected:
     AP_Float dist_hwpl_1;
     AP_Float dist_hwpl_2;
     AP_Float dist_hwpl_3;
+    AP_Float dist_hwpl_4;
 
     // The following variables describes the beginning and the end of the forbidden area where the HWP
     // cannot be generated. The areas is described as the sector of the circle centered in the landing point.
@@ -171,6 +172,8 @@ private:
 
     // calc_theta_hwp() - calculates the direction of the HWP based on the forbidden zone
     float calc_theta_hwp(float theta_wind, MC &last_mwp, MC &land_wp);
+    
+    int getBearing(Location p1, Location p2);
 
     bool check_crossing_no_landing_zone(MC &last_mwp, MC &land_wp, MC &lta_wp, float begin_area, float end_area);
 
