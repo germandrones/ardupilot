@@ -173,13 +173,16 @@ private:
     // calc_theta_hwp() - calculates the direction of the HWP based on the forbidden zone
     float calc_theta_hwp(float theta_wind, MC &last_mwp, MC &land_wp);
     
+    // some helper methods
     int getBearing(Location p1, Location p2);
+    Location newPos(Location inLocation, float bearing, float distance);
+    bool DoLineSegmentsIntersect(float x1, float y1, float x2, float y2, float x1s, float y1s, float x2s, float y2s);
+
+
 
     bool check_crossing_no_landing_zone(MC &last_mwp, MC &land_wp, MC &lta_wp, float begin_area, float end_area);
-
     bool IsOnSegment(double xi, double yi, double xj, double yj,double xk, double yk);
     char ComputeDirection(double xi, double yi, double xj, double yj, double xk, double yk);
-    bool DoLineSegmentsIntersect(double x1, double y1, double x2, double y2, double x3, double y3, double x4, double y4);
 
     // does_segments_intersect() - checks if two segments intersect. The segments are passed specifying the Point
     bool does_segments_intersects(Vector2l &P1, Vector2l &P2, Vector2l &P3, Vector2l &P4);

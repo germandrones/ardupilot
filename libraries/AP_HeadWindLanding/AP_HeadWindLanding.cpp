@@ -362,19 +362,29 @@ void AP_HeadWindLanding::generate_hw_waypoints(const MC& cmd)
 
 
 		/* ----- HWP4 CALCULATION ----- */
+		bool use_hwp4 = false;
 
-		int bearing = getBearing(last_mwp.content.location, wp.content.location);
-		loc_hwp4.lat = land_wp.lat + dist_hwpl_4 * cos(bearing * DEG_TO_RAD) / mdlat * 10000000.0f;
-		loc_hwp4.lng = land_wp.lng + dist_hwpl_4 * sin(bearing * DEG_TO_RAD) / mdlng * 10000000.0f;
-		loc_hwp4.alt = last_mwp.content.location.alt;
-		loc_hwp4.flags.relative_alt = 1;
-		
-		hwp4 = last_mwp;
-		hwp4.id = MAV_CMD_NAV_WAYPOINT;		
-		hwp4.content.location = loc_hwp4;
+		// we need to check just one single line on intersection
+		Location P1 = newPos(wp.content.location, begin_no_landing_area, hwp_radius);
+		bool isIntersects = DoLineSegmentsIntersect(last_mwp.content.location.lng, last_mwp.content.location.lat, loc_hwp3.lng, loc_hwp3.lat, wp.content.location.lng, wp.content.location.lat,	P1.lng, P1.lat);
 
-		//hwp4.content.location.lat = -1;
-		//hwp4.content.location.lng = -1;
+		if(isIntersects) { use_hwp4 = true; }
+
+		if(use_hwp4)
+		{
+			int bearing = getBearing(last_mwp.content.location, wp.content.location);
+			loc_hwp4.lat = land_wp.lat + dist_hwpl_4 * cos(bearing * DEG_TO_RAD) / mdlat * 10000000.0f;
+			loc_hwp4.lng = land_wp.lng + dist_hwpl_4 * sin(bearing * DEG_TO_RAD) / mdlng * 10000000.0f;
+			loc_hwp4.alt = last_mwp.content.location.alt;
+			loc_hwp4.flags.relative_alt = 1;
+			hwp4 = last_mwp;
+			hwp4.id = MAV_CMD_NAV_WAYPOINT;	
+			hwp4.content.location = loc_hwp4;
+
+		}else{
+			hwp4.content.location.lat = -1;
+			hwp4.content.location.lng = -1;
+		}
 		/* ----- EOF HWP4 CALCULATION ----- */
 
 
@@ -386,6 +396,7 @@ void AP_HeadWindLanding::generate_hw_waypoints(const MC& cmd)
 		if(hwp_enabled)
 		{
 			_mission.truncate(idx_landing_wp);
+			if(use_hwp4){ _mission.add_cmd(hwp4); } // Add HWP4 only if it realy needed
 			_mission.add_cmd(hwp3);
 			_mission.add_cmd(hwp2);
 			// _mission.add_cmd(reduce_speed);
@@ -402,6 +413,17 @@ void AP_HeadWindLanding::generate_hw_waypoints(const MC& cmd)
 
 }
 
+// line segments crossing check. 
+bool AP_HeadWindLanding::DoLineSegmentsIntersect(float x1, float y1, float x2, float y2, float x1s, float y1s, float x2s, float y2s)
+{
+	float v1 = (x2s - x1s) * (y1-y1s) - (y2s-y1s) * (x1-x1s);
+    float v2 = (x2s - x1s) * (y2-y1s) - (y2s-y1s) * (x2-x1s);
+    float v3 = (x2 - x1) * (y1s-y1) - (y2-y1) * (x1s-x1);
+    float v4 = (x2 - x1) * (y2s-y1) - (y2-y1) * (x2s-x1);
+
+	return ((v1 * v2 < 0) && (v3 * v4 < 0));
+}
+
 int AP_HeadWindLanding::getBearing(Location p1, Location p2)
 {
 	float latitude1 = (p1.lat * TO_DEG_FORMAT) * DEG_TO_RAD;
@@ -414,6 +436,20 @@ int AP_HeadWindLanding::getBearing(Location p1, Location p2)
 
     float result = (RAD_TO_DEG * atan2(y, x)) + 360.0;
 	return (int)result % 360;
+}
+
+// return new point location
+Location AP_HeadWindLanding::newPos(Location inLocation, float bearing, float distance)
+{    
+	float mdlat = METERS_PER_DEG_LAT(inLocation.lat * TO_DEG_FORMAT);
+	float mdlng = METERS_PER_DEG_LNG(inLocation.lat * TO_DEG_FORMAT);
+
+    Location result;
+	result.lat = inLocation.lat + distance * cos(bearing * DEG_TO_RAD) / mdlat * 10000000.0f;
+	result.lng = inLocation.lng + distance * sin(bearing * DEG_TO_RAD) / mdlng * 10000000.0f;
+	result.alt = inLocation.alt;
+    
+    return result;
 }
 
 
@@ -460,11 +496,7 @@ char AP_HeadWindLanding::ComputeDirection(double xi, double yi, double xj, doubl
 	return a < b ? -1 : a > b ? 1 : 0;
 }
 
-bool AP_HeadWindLanding::DoLineSegmentsIntersect(double x1, double y1, double x2, double y2, double x3, double y3, double x4, double y4)
-{
-	// Not yet implemented
-	return false;
-}
+
 
 float AP_HeadWindLanding::calc_theta_hwp(float theta_wind, MC &last_mwp, MC &land_wp)
 {
