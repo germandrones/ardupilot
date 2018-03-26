@@ -298,7 +298,7 @@ void AP_HeadWindLanding::generate_hw_waypoints(const MC& cmd)
 		// WindX is the component of the wind along North Axis. WindY is the component of the wind along East Axis.
 		thetaWind = atan2(wind.y,wind.x)*180.0/M_PI;
 
-		thetaWind = 90.0; //debug line. remove it later
+		//thetaWind = 90.0; //debug line. remove it later
 
 		// TODO: rename wp to land_wp
 		theta_hwp = calc_theta_hwp(thetaWind,last_mwp,wp);
