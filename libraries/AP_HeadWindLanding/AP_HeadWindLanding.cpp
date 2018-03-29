@@ -269,7 +269,7 @@ void AP_HeadWindLanding::generate_hw_waypoints(const MC& cmd)
 		// because they are too close. We define the minimum radius according to the following formula:
 		// hwp_radius=2*loiter_to_altitude+4*waypoint_radius (waypoint point radius is set to 30 meters for the moment).
 
-		hwp_radius = 2*loiter_radius+4*waypoint_radius;
+		hwp_radius = 2*loiter_radius+6*waypoint_radius;
 
 		if(hwp_radius < MIN_RADIUS_HEADINGWIND_WAYPOINT)
 			hwp_radius = MIN_RADIUS_HEADINGWIND_WAYPOINT;

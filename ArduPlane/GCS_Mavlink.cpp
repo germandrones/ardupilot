@@ -195,7 +195,6 @@ void Plane::send_hwp_message(mavlink_channel_t chan)
 	int32_t hwp_lng4 = hwp4.content.location.lng;
 
 	mavlink_msg_hwp_send(chan, hwp_lat1,hwp_lng1,hwp_lat2,hwp_lng2,hwp_lat3,hwp_lng3,hwp_lat4,hwp_lng4);
-	//gcs().send_text(MAV_SEVERITY_NOTICE, "HWP is sent");
 }
 
 void Plane::send_location_neitzke(mavlink_channel_t chan)
@@ -251,34 +250,34 @@ void Plane::send_location_neitzke(mavlink_channel_t chan)
 		bool postion_ok;
 		Vector3f curr_pos_ned;
 
-		ref = plane.home;
-		postion_ok = gps.status() >= AP_GPS::GPS_OK_FIX_2D;
-		curr_pos_ned = location_3d_diff_NED(ref, plane.current_loc);
+		if(plane.home.alt!=0 || plane.home.lat!=0 || plane.home.lng !=0)
+		{
+			ref = plane.home;
+			postion_ok = gps.status() >= AP_GPS::GPS_OK_FIX_2D;
+			curr_pos_ned = location_3d_diff_NED(ref, plane.current_loc);
 
-		// NEU frame:
-		/*   @return velocity vector:
-		 *      	.x : latitude  velocity in cm/s
-		 * 			.y : longitude velocity in cm/s
-		 * 			.z : vertical  velocity in cm/s
-		 */
-		Vector3f curr_vel_ned;
-
-		curr_vel_ned = gps.velocity();
-
-		mavlink_msg_local_position_neitzke_send(
-				chan,
-				fix_time_ms,
-				postion_ok, // bool
-				curr_pos_ned.x*100,                // cm
-				curr_pos_ned.y*100,                // cm
-				-curr_pos_ned.z*100,         // cm
-				barometer.get_altitude() * 1.0e2f,     //altitude from baro, in cm
-				curr_vel_ned.x*100,  // X speed cm/s (+ve North)
-				curr_vel_ned.y*100,  // Y speed cm/s (+ve East)
-				-curr_vel_ned.z*100, // Z speed cm/s (+ve up)
-				ahrs.yaw_sensor,
-				(int8_t)plane.flight_stage);
-
+			// NEU frame:
+			/*   @return velocity vector:
+			 *      	.x : latitude  velocity in cm/s
+			 * 			.y : longitude velocity in cm/s
+			 * 			.z : vertical  velocity in cm/s
+			 */
+			Vector3f curr_vel_ned;
+			curr_vel_ned = gps.velocity();
+			mavlink_msg_local_position_neitzke_send(
+					chan,
+					fix_time_ms,
+					postion_ok, // bool
+					curr_pos_ned.x*100,                // cm
+					curr_pos_ned.y*100,                // cm
+					-curr_pos_ned.z*100,         // cm
+					barometer.get_altitude() * 1.0e2f,     //altitude from baro, in cm
+					curr_vel_ned.x*100,  // X speed cm/s (+ve North)
+					curr_vel_ned.y*100,  // Y speed cm/s (+ve East)
+					-curr_vel_ned.z*100, // Z speed cm/s (+ve up)
+					ahrs.yaw_sensor,
+					(int8_t)plane.flight_stage);
+		}
 	}
 }
 
@@ -1867,7 +1866,7 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
         }
         plane.failsafe.last_heartbeat_ms = AP_HAL::millis();
         hilCounter++;
-        if((AP_HAL::millis()-hilFreqTimer)>=10000)
+        if((AP_HAL::millis()-hilFreqTimer)>=1000)
         {
         	hilFreq=hilCounter;
         	hilCounter =0;
@@ -2186,6 +2185,8 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
 			//gcs().send_text(MAV_SEVERITY_NOTICE, "GD MSG: %d, %s",plane.gd_status.err_num,plane.gd_status.err_msg);
         }
     	break;
+
+    // get responce message from GCS
     // Special case for mission items to see if we need to enable/disable the HWP feature
     case MAVLINK_MSG_ID_MISSION_ITEM:
     case MAVLINK_MSG_ID_MISSION_ITEM_INT:
