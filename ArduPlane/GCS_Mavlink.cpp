@@ -7,8 +7,9 @@
  */
 #if HIL_SUPPORT
 static mavlink_hil_state_t last_hil_state;
-static int hilFreq=0, hilCounter=0;
+static int hilFreq=0, hilCounter=0, hilStart=0;
 static uint32_t hilFreqTimer=0;
+static Location hilRef;
 #endif
 
 void Plane::send_heartbeat(mavlink_channel_t chan)
@@ -245,17 +246,18 @@ void Plane::send_location_neitzke(mavlink_channel_t chan)
 				ahrs.yaw_sensor,
 				(int8_t)plane.flight_stage);
 	} else
-	{
-		Location ref, pos;
+	{ // HIL
+		Location pos;
 		bool postion_ok;
 		Vector3f curr_pos_ned;
 
-		if(plane.home.alt!=0 || plane.home.lat!=0 || plane.home.lng !=0)
+		if(hilRef.alt!=0 || hilRef.lat!=0 || hilRef.lng !=0)
 		{
-			ref = plane.home;
-			postion_ok = gps.status() >= AP_GPS::GPS_OK_FIX_2D;
-			curr_pos_ned = location_3d_diff_NED(ref, plane.current_loc);
+			postion_ok = gps.status() >= AP_GPS::GPS_OK_FIX_2D && last_hil_state.time_usec>10e6;
+			curr_pos_ned = location_3d_diff_NED(hilRef, plane.current_loc);
 
+			if(curr_pos_ned.length()<200000)
+			{
 			// NEU frame:
 			/*   @return velocity vector:
 			 *      	.x : latitude  velocity in cm/s
@@ -277,6 +279,13 @@ void Plane::send_location_neitzke(mavlink_channel_t chan)
 					-curr_vel_ned.z*100, // Z speed cm/s (+ve up)
 					ahrs.yaw_sensor,
 					(int8_t)plane.flight_stage);
+			// for debug
+			mavlink_msg_local_position_ned_send(chan,fix_time_ms,
+					curr_pos_ned.x, curr_pos_ned.y, curr_pos_ned.z,
+					curr_vel_ned.x, curr_vel_ned.y, curr_vel_ned.z);
+
+
+			}
 		}
 	}
 }
@@ -1042,7 +1051,7 @@ GCS_MAVLINK_Plane::data_stream_send(void)
         send_message(MSG_LOCATION_NEITZKE);
         if(plane.ack_to_gdpilot_must_be_sent)
         {
-        	gcs().send_text(MAV_SEVERITY_INFO, "Sending ACK to GD");
+//        	gcs().send_text(MAV_SEVERITY_INFO, "Sending ACK to GD");
         	send_message(MSG_ACK_GDPILOT);
         }
     }
@@ -1864,6 +1873,11 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
         if (plane.g.hil_mode != 1) {
             break;
         }
+        if(hilStart<100)
+        {
+            hilStart++;
+            break;
+        }
         plane.failsafe.last_heartbeat_ms = AP_HAL::millis();
         hilCounter++;
         if((AP_HAL::millis()-hilFreqTimer)>=1000)
@@ -1900,17 +1914,13 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
                          packet.time_usec/1000,
                          loc, vel, 10, 3);
         plane.gps.setHIL_Accuracy(0, 0.2, 0.2, 0.3, 0.4, true, AP_HAL::millis());
-/*
-        if(plane.home_is_set !=HOME_SET_AND_LOCKED)
+
+        if((hilRef.alt==0 || hilRef.lat==0 || hilRef.lng==0) && packet.time_usec>1000000)
         {
-        	plane.ahrs.set_home(loc);
-        	plane.home_is_set = HOME_SET_AND_LOCKED;
-            gcs().send_text(MAV_SEVERITY_INFO, "Init HOME to %.6f %.6f at %um",
-                                    (double)(loc.lat*1.0e-7f),
-                                    (double)(loc.lng*1.0e-7f),
-                                    (uint32_t)(loc.alt*0.01f));
+        	hilRef = loc;
+            gcs().send_text(MAV_SEVERITY_WARNING, "HIL_STATE hilRef (%i %i %i)", hilRef.lat, hilRef.lng, hilRef.alt);
         }
-*/
+
         // rad/sec
         Vector3f gyros;
         gyros.x = packet.rollspeed;
@@ -1938,7 +1948,7 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
             plane.ahrs.reset_attitude(packet.roll, packet.pitch, packet.yaw);
             static uint16_t attiResetCount = 0;
             attiResetCount++;
-            gcs().send_text(MAV_SEVERITY_DEBUG, "HIL reset atti %i", attiResetCount);
+            //gcs().send_text(MAV_SEVERITY_DEBUG, "HIL reset atti %i", attiResetCount);
         }
 #endif
         break;
