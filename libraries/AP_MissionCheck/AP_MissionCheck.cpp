@@ -14,7 +14,7 @@ MissionCheck::MissionCheck(AP_Mission& mission, DataFlash_Class &dataflash, GCS&
     takeoff_wp_present = false;
     landing_wp_present = false;
     num_nav_wayponts = 0;
-    
+
     index_takeoff_waypoint = -1;
     index_landing_waypoint = -1;
 

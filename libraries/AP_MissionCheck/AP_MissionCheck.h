@@ -18,6 +18,7 @@ class MissionCheck
 public:
 
     // Constructor
+    MissionCheck(AP_Mission &mission, DataFlash_Class &dataflash, GCS& gcs, AP_AHRS& ahrs);
     MissionCheck(AP_Mission &mission, DataFlash_Class &dataflash, GCS& gcs);
 
     // Destructor
@@ -34,7 +35,8 @@ public:
 
     uint16_t get_num_nav_wayponts() { return num_nav_wayponts; }
     
-    virtual bool check()             = 0;
+    virtual bool check(Location currentPosition) = 0;
+    virtual bool check() = 0;
     virtual void init_mission()      = 0;
     virtual void notify_user()       = 0;
 
@@ -47,17 +49,14 @@ protected:
     AP_Mission&	        _mission;
     DataFlash_Class&	_dataflash;
     GCS&				_gcs;
-    
     void logInfo(char* _msg);
 
     // Generic message container for logging
     char* msg;
-
-private:
-
     int16_t index_takeoff_waypoint;
     int16_t index_landing_waypoint;
-  
+
+private:
     /// get_index_last_nav_WP - returns the index of the last mission waypoint.
     int16_t get_index_last_nav_WP();
 

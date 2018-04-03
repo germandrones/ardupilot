@@ -19,9 +19,10 @@ class MissionCheck_STD : public MissionCheck
   
 public:
   
-    MissionCheck_STD(AP_Mission &mission, DataFlash_Class &dataflash, GCS& gcs);
+    MissionCheck_STD(AP_Mission &mission, DataFlash_Class &dataflash, GCS& gcs); // to do after upload
     
     void init_mission();
+    bool check(Location currentPosition);
     bool check();
     void notify_user();
      

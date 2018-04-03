@@ -20,9 +20,10 @@ class MissionCheck_HWP : public MissionCheck
   
 public:
   
-	MissionCheck_HWP(AP_Mission &mission, DataFlash_Class &dataflash, AP_HeadWindLanding &headwind_wp, GCS& gcs);
+	MissionCheck_HWP(AP_Mission &mission, DataFlash_Class &dataflash, AP_HeadWindLanding &headwind_wp, GCS& gcs); // after upload
     
     void init_mission();
+    bool check(Location currentPosition);
     bool check();
     void notify_user();
      
