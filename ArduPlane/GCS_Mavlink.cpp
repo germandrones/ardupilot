@@ -581,6 +581,7 @@ bool GCS_MAVLINK::is_message_nesesary_for_np(enum ap_message id)
 		case MSG_LANDING:
 		case MSG_NAMED_FLOAT:
 		case MSG_HWP:
+        case MSG_LOG_INFO_REQUEST:
 		case MSG_LAST:
 
 			return false;
@@ -2139,6 +2140,19 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
 		}
 
 		break;
+
+    case MAVLINK_MSG_ID_LOG_INFO_REQUEST:
+    {
+        mavlink_log_info_request_t msg_file_id;
+        mavlink_msg_log_info_request_decode(msg,&msg_file_id);
+        if(msg_file_id.id != 0)
+        {
+            gcs().send_text(MAV_SEVERITY_NOTICE, "GD Log Filename: LOG%05u.bin", msg_file_id.id);
+            gcs().send_text(MAV_SEVERITY_NOTICE, "PX Log Filename: %08u.bin", plane.DataFlash.find_last_log());
+            gcs().send_text(MAV_SEVERITY_NOTICE, "SongbirdGD-3.8.0 (%.8s)", msg_file_id.gitHash);
+        }
+        break;
+    }
 
     default:
         handle_common_message(msg);
