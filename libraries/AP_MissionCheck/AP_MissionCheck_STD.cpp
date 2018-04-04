@@ -31,6 +31,11 @@ void MissionCheck_STD::notify_user()
 
 bool MissionCheck_STD::check(Location currentPosition)
 {
+	if(update_land_waypoint(currentPosition))
+	{
+		asprintf(&msg,"LAND AT CURRENT POS");
+		logInfo(msg);
+	}
 	return check();
 }
 

@@ -29,12 +29,15 @@ public:
     
     bool is_takeoff_wp_present()    { return index_takeoff_waypoint > 0 ? true : false; }
     bool is_landing_wp_present()    { return index_landing_waypoint > 0 ? true : false; }
+    bool is_return_wp_present()    { return index_return_waypoint > 0 ? true : false; }
 
     uint16_t get_index_takeoff_wp()	{ return index_takeoff_waypoint; }
     uint16_t get_index_landing_wp()	{ return index_landing_waypoint; }
 
     uint16_t get_num_nav_wayponts() { return num_nav_wayponts; }
     
+    bool update_land_waypoint(Location currentPosition);
+
     virtual bool check(Location currentPosition) = 0;
     virtual bool check() = 0;
     virtual void init_mission()      = 0;
@@ -55,6 +58,7 @@ protected:
     char* msg;
     int16_t index_takeoff_waypoint;
     int16_t index_landing_waypoint;
+    int16_t index_return_waypoint;
 
 private:
     /// get_index_last_nav_WP - returns the index of the last mission waypoint.
