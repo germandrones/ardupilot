@@ -45,17 +45,16 @@ bool MissionCheck_HWP::check(Location currentLoc)
 		asprintf(&msg,"NO LANDING WP");
 		if(is_takeoff_wp_present())
 		{
-			AP_Mission::Mission_Command cmdLand;
 			AP_Mission::Mission_Command cmdTakeOff;
 		    if(_mission.get_next_nav_cmd(index_takeoff_waypoint, cmdTakeOff))
 		    {
-		    	cmdLand.id = MAV_CMD_NAV_LAND;
-				{
-		    		cmdLand.content.location = currentLoc;
-					cmdLand.content.location.alt = cmdTakeOff.content.location.alt;
-					cmdLand.content.location.flags = cmdTakeOff.content.location.flags;
+				if(check_latlng(currentLoc.lat, currentLoc.lng)){
+		    		// replace takeoff position with current position
+		    		cmdTakeOff.content.location.lat = currentLoc.lat;
+		    		cmdTakeOff.content.location.lng = currentLoc.lng;
 
-					_mission.add_cmd(cmdLand);
+		    		index_landing_waypoint = index_takeoff_waypoint;
+					_mission.replace_cmd(index_takeoff_waypoint, cmdTakeOff);
 					inspect_stored_mission();
 					hwp_feature_usable = true;
 					asprintf(&msg,"LANDING AT CURRENT POS");

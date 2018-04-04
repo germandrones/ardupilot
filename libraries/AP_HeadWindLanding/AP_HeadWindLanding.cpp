@@ -129,7 +129,6 @@ void AP_HeadWindLanding::check_no_landing_area_defined(void)
 
 void AP_HeadWindLanding::calc_index_landing_waypoint(void)
 {
-
     // Command item used for iterating through the mission
     AP_Mission::Mission_Command current_cmd;
 
@@ -138,6 +137,11 @@ void AP_HeadWindLanding::calc_index_landing_waypoint(void)
     {
 		_mission.get_next_nav_cmd(i, current_cmd);
 
+		if(current_cmd.id == MAV_CMD_NAV_TAKEOFF)
+		{
+			idx_landing_wp = current_cmd.index;
+			// dont stop yet, if we find a landing command we will use it
+		}
 		if(current_cmd.id == MAV_CMD_NAV_LAND)
 		{
 			idx_landing_wp = current_cmd.index;
@@ -156,7 +160,6 @@ void AP_HeadWindLanding::calc_index_landing_waypoint(void)
 
 void AP_HeadWindLanding::calc_index_last_mission_waypoint(void)
 {
-
     // Command item used for iterating through the mission
     AP_Mission::Mission_Command current_cmd;
 
@@ -164,7 +167,6 @@ void AP_HeadWindLanding::calc_index_last_mission_waypoint(void)
     for(int16_t i=num_cmd-1; i>=0; i--)
     {
 		_mission.get_next_nav_cmd(i, current_cmd);
-
 		if(current_cmd.id == MAV_CMD_NAV_WAYPOINT)
 		{
 			idx_last_mission_wp = current_cmd.index;
@@ -369,13 +371,15 @@ void AP_HeadWindLanding::generate_hw_waypoints(const MC& cmd)
 
 		if(hwp_enabled)
 		{
-			_mission.truncate(idx_landing_wp);
+			if(idx_landing_wp> idx_last_mission_wp)
+				_mission.truncate(idx_landing_wp);
 			_mission.add_cmd(hwp3);
 			_mission.add_cmd(hwp2);
 			// _mission.add_cmd(reduce_speed);
 			_mission.add_cmd(hwp1);
 			// For the moment the UAV will still land at the original landing waypoint
-			_mission.add_cmd(wp);
+			if(idx_landing_wp> idx_last_mission_wp)
+				_mission.add_cmd(wp);
 		}
 
 		hwp_status = HWP_GENERATED;
@@ -526,6 +530,13 @@ void AP_HeadWindLanding::restore_mission()
 		{
 			// I remove the mission items starting from the index of the original landing waypoint
 			_mission.truncate(idx_landing_wp);
+			// I add the current waypoint (landing waypoint) as the last item
+			_mission.add_cmd(wp);
+		}
+		if(wp.id==MAV_CMD_NAV_WAYPOINT) // we dint had a landing point
+		{
+			// I remove the mission items starting from the index of the original landing waypoint
+			_mission.truncate(idx_last_mission_wp);
 			// I add the current waypoint (landing waypoint) as the last item
 			_mission.add_cmd(wp);
 		}
