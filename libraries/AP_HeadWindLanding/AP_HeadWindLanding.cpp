@@ -244,7 +244,7 @@ void AP_HeadWindLanding::generate_hw_waypoints(const MC& cmd)
 		float mdlng = METERS_PER_DEG_LNG(lat);
 
 		// Coordinates of the virtual waypoints
-		Location loc_hwp1, loc_hwp2, loc_hwp3;
+		Location loc_hwp1, loc_hwp2, loc_hwp3, loc_hwp4;
 		Location land_wp = wpLandOriginal.content.location;
 
 		// Retrieve the last mission waypoint from the mission
@@ -276,6 +276,7 @@ void AP_HeadWindLanding::generate_hw_waypoints(const MC& cmd)
 		dist_hwpl_1 = hwp_radius - 2*loiter_radius - 2*waypoint_radius;	// Distance between landing waypoint and closest HWP
 		dist_hwpl_2 = hwp_radius - 2*loiter_radius;                     // Distance between landing waypoint and mid HWP
 		dist_hwpl_3 = hwp_radius;                                       // Distance between the landing point and the LTA waypoint
+		dist_hwpl_4 = hwp_radius;										// Distance between the landing point and forth HWP
 
 		// Retrieve information about the wind --------------------------------------------
 		// I assume that at this point of the mission I have a good estimation of wind
@@ -296,7 +297,7 @@ void AP_HeadWindLanding::generate_hw_waypoints(const MC& cmd)
 		// WindX is the component of the wind along North Axis. WindY is the component of the wind along East Axis.
 		thetaWind = atan2(wind.y,wind.x)*180.0/M_PI;
 
-		// thetaWind = 90.0;
+		//thetaWind = 90.0; //debug line. remove it later
 
 		// TODO: rename wp to land_wp
 		theta_hwp = calc_theta_hwp(thetaWind, last_mwp, wpLandOriginal);
@@ -358,8 +359,33 @@ void AP_HeadWindLanding::generate_hw_waypoints(const MC& cmd)
 		hwp1.id = MAV_CMD_NAV_WAYPOINT;
 		hwp1.content.location = loc_hwp1;
 
-		hwp4.content.location.lat = -1;
-		hwp4.content.location.lng = -1;
+
+		/* ----- HWP4 CALCULATION ----- */
+		bool use_hwp4 = false;
+
+		// we need to check just one single line on intersection
+		Location P1 = newPos(wpLandOriginal.content.location, begin_no_landing_area, hwp_radius);
+		bool isIntersects = DoLineSegmentsIntersect(last_mwp.content.location.lng, last_mwp.content.location.lat, loc_hwp3.lng, loc_hwp3.lat, wpLandOriginal.content.location.lng, wpLandOriginal.content.location.lat,	P1.lng, P1.lat);
+
+		if(isIntersects) { use_hwp4 = true; }
+
+		if(use_hwp4)
+		{
+			int bearing = getBearing(last_mwp.content.location, wpLandOriginal.content.location);
+			loc_hwp4.lat = land_wp.lat + dist_hwpl_4 * cos(bearing * DEG_TO_RAD) / mdlat * 10000000.0f;
+			loc_hwp4.lng = land_wp.lng + dist_hwpl_4 * sin(bearing * DEG_TO_RAD) / mdlng * 10000000.0f;
+			loc_hwp4.alt = last_mwp.content.location.alt;
+			loc_hwp4.flags.relative_alt = 1;
+			hwp4 = last_mwp;
+			hwp4.id = MAV_CMD_NAV_WAYPOINT;	
+			hwp4.content.location = loc_hwp4;
+
+		}else{
+			hwp4.content.location.lat = -1;
+			hwp4.content.location.lng = -1;
+		}
+		/* ----- EOF HWP4 CALCULATION ----- */
+
 
 		// Before adding the HWP waypoints to the mission, we need to check if the segment connecting the last mission waypoint
 		// and the farthest HWP waypoint (LTA) intersect the no landing zone. If yes, we need to add one more waypoint. This fourth
@@ -369,14 +395,17 @@ void AP_HeadWindLanding::generate_hw_waypoints(const MC& cmd)
 		if(hwp_enabled)
 		{
 			int idx = idx_landing_wp;
+			if(use_hwp4)
+			{
+				addWPAtIndex(idx, hwp4);
+				idx++;
+			}
 			addWPAtIndex(idx, hwp3);
 			idx++;
 			addWPAtIndex(idx, hwp2);
 			idx++;
 			addWPAtIndex(idx, hwp1);
 			idx++;
-			// For the moment the UAV will still land at the original landing waypoint
-//			addWPAfterIndex(idx, wpLandOriginal);
 		}
 
 		hwp_status = HWP_GENERATED;
@@ -411,6 +440,46 @@ bool AP_HeadWindLanding::removeWPAtIndex(uint16_t idx)
 	_mission.truncate(idx);
 	return true;
 }
+
+// line segments crossing check. 
+bool AP_HeadWindLanding::DoLineSegmentsIntersect(float x1, float y1, float x2, float y2, float x1s, float y1s, float x2s, float y2s)
+{
+	float v1 = (x2s - x1s) * (y1-y1s) - (y2s-y1s) * (x1-x1s);
+    float v2 = (x2s - x1s) * (y2-y1s) - (y2s-y1s) * (x2-x1s);
+    float v3 = (x2 - x1) * (y1s-y1) - (y2-y1) * (x1s-x1);
+    float v4 = (x2 - x1) * (y2s-y1) - (y2-y1) * (x2s-x1);
+
+	return ((v1 * v2 < 0) && (v3 * v4 < 0));
+}
+
+int AP_HeadWindLanding::getBearing(Location p1, Location p2)
+{
+	float latitude1 = (p1.lat * TO_DEG_FORMAT) * DEG_TO_RAD;
+    float latitude2 = (p2.lat * TO_DEG_FORMAT) * DEG_TO_RAD;
+	
+    float longitudeDifference = (p2.lng * TO_DEG_FORMAT - p1.lng * TO_DEG_FORMAT) * DEG_TO_RAD;
+
+    float y = sin(longitudeDifference) * cos(latitude2);
+    float x = cos(latitude1) * sin(latitude2) - sin(latitude1) * cos(latitude2) * cos(longitudeDifference);
+
+    float result = (RAD_TO_DEG * atan2(y, x)) + 360.0;
+	return (int)result % 360;
+}
+
+// return new point location
+Location AP_HeadWindLanding::newPos(Location inLocation, float bearing, float distance)
+{    
+	float mdlat = METERS_PER_DEG_LAT(inLocation.lat * TO_DEG_FORMAT);
+	float mdlng = METERS_PER_DEG_LNG(inLocation.lat * TO_DEG_FORMAT);
+
+    Location result;
+	result.lat = inLocation.lat + distance * cos(bearing * DEG_TO_RAD) / mdlat * 10000000.0f;
+	result.lng = inLocation.lng + distance * sin(bearing * DEG_TO_RAD) / mdlng * 10000000.0f;
+	result.alt = inLocation.alt;
+    
+    return result;
+}
+
 
 void AP_HeadWindLanding::update_num_commands()
 {
@@ -455,11 +524,7 @@ char AP_HeadWindLanding::ComputeDirection(double xi, double yi, double xj, doubl
 	return a < b ? -1 : a > b ? 1 : 0;
 }
 
-bool AP_HeadWindLanding::DoLineSegmentsIntersect(double x1, double y1, double x2, double y2, double x3, double y3, double x4, double y4)
-{
-	// Not yet implemented
-	return false;
-}
+
 
 float AP_HeadWindLanding::calc_theta_hwp(float theta_wind, MC &last_mwp, MC &land_wp)
 {
@@ -478,7 +543,7 @@ float AP_HeadWindLanding::calc_theta_hwp(float theta_wind, MC &last_mwp, MC &lan
 
 		// gcs().send_text(MAV_SEVERITY_NOTICE, "3. begin/end initial %f %f",begin_no_landing_area,end_no_landing_area);
 
-		float extra_area = sector_dimension_from_chord(hwp_radius,loiter_radius)*180.0/M_PI;
+		float extra_area = sector_dimension_from_chord(hwp_radius, 2 * loiter_radius)*180.0/M_PI;
 
 		float begin_ext_no_landing_area = begin_no_landing_area - extra_area;
 		float end_ext_no_landing_area = end_no_landing_area + extra_area;
