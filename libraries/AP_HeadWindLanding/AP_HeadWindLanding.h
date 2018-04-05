@@ -122,6 +122,7 @@ public:
     void ack_echo_received(){ is_hwp_received = true; }
 
 protected:
+	AP_Mission::Mission_Command wpLandOriginal;
 
     AP_Int8  hwp_enabled;
     AP_Int8	 hwp_mav_cmd_present;
@@ -186,6 +187,8 @@ private:
 
     // does_segments_intersect() - checks if two segments intersect. The segments are passed specifying the Point
     bool does_segments_intersects(Vector2l &P1, Vector2l &P2, Vector2l &P3, Vector2l &P4);
+    bool addWPAtIndex(uint16_t idx, AP_Mission::Mission_Command& wp);
+    bool removeWPAtIndex(uint16_t idx);
 
     typedef struct {
       // The following variable set the point in the mission where the virtual waypoints are generated.

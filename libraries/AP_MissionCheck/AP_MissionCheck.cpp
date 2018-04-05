@@ -14,30 +14,80 @@ MissionCheck::MissionCheck(AP_Mission& mission, DataFlash_Class &dataflash, GCS&
     takeoff_wp_present = false;
     landing_wp_present = false;
     num_nav_wayponts = 0;
-    
+
     index_takeoff_waypoint = -1;
     index_landing_waypoint = -1;
+    index_return_waypoint = -1;
 
     inspect_stored_mission();
 }
 
+bool MissionCheck::update_land_waypoint(Location currentPosition)
+{
+	if(is_landing_wp_present() && !is_return_wp_present())
+		return true; // normal landing at position in mission
+	if(is_takeoff_wp_present()) // we need take-off for transition altitude
+	{
+		AP_Mission::Mission_Command cmdLand;
+		AP_Mission::Mission_Command cmdTakeOff;
+		AP_Mission::Mission_Command cmdReturn;
+		bool result = true;
+		if(_mission.get_next_nav_cmd(index_takeoff_waypoint, cmdTakeOff))
+		{
+			cmdLand.id = MAV_CMD_NAV_LAND;
+			if(check_latlng(currentPosition)){
+				cmdLand.content.location = currentPosition;// use current position for landing
+				cmdLand.content.location.alt = cmdTakeOff.content.location.alt; // use takeoff alt for transition
+				cmdLand.content.location.flags = cmdTakeOff.content.location.flags;
+
+				cmdReturn = cmdLand; // copy pos and alt
+				cmdReturn.id = MAV_CMD_NAV_RETURN_TO_LAUNCH; // change id
+
+				if(is_landing_wp_present())
+					result &= _mission.replace_cmd(index_landing_waypoint, cmdLand);
+				else
+					result &= _mission.add_cmd(cmdLand);
+				if(is_return_wp_present())
+					result &= _mission.replace_cmd(index_return_waypoint, cmdReturn);
+				else
+					result &= _mission.add_cmd(cmdReturn);
+				inspect_stored_mission();
+				if(result)
+					return true;
+			}
+		}
+		// if we come here something went wrong so delete landing point
+		if(is_landing_wp_present())
+			_mission.truncate(index_landing_waypoint-1);
+		inspect_stored_mission();
+	}
+	return false;
+}
 void MissionCheck::inspect_stored_mission()
 {
   
   AP_Mission::Mission_Command cmd;
   
+  index_takeoff_waypoint = -1;
+  index_return_waypoint = -1;
+  index_landing_waypoint = -1;
   uint16_t num_items = _mission.num_commands();
   
   for(uint16_t i = 0; i < num_items; i++)
   {
       _mission.get_next_nav_cmd(i, cmd);
       
-      if(cmd.id == MAV_CMD_NAV_TAKEOFF)
+      if(cmd.id == MAV_CMD_NAV_TAKEOFF && index_takeoff_waypoint==-1) // only first in mission
       {
     	  index_takeoff_waypoint = cmd.index;
       }
-      
-      if(cmd.id == MAV_CMD_NAV_LAND)
+
+      if(cmd.id == MAV_CMD_NAV_RETURN_TO_LAUNCH)
+      {
+    	  index_return_waypoint = cmd.index;
+      }
+
+      if(cmd.id == MAV_CMD_NAV_LAND && index_landing_waypoint==-1) // only first in mission
       {
     	  index_landing_waypoint = cmd.index;
       }

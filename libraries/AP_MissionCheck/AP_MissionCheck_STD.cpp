@@ -29,6 +29,16 @@ void MissionCheck_STD::notify_user()
     // The idea of this function is to drive the LED to notify the USER about possible errors
 }
 
+bool MissionCheck_STD::check(Location currentPosition)
+{
+	if(update_land_waypoint(currentPosition))
+	{
+		asprintf(&msg,"LAND AT CURRENT POS");
+		logInfo(msg);
+	}
+	return check();
+}
+
 bool MissionCheck_STD::check()
 {
 

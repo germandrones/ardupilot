@@ -91,7 +91,7 @@ bool AP_HeadWindLanding::is_disable_HWP_command_present()
 
 	  for(uint16_t i = 0; i < num_items; i++)
 	  {
-	      _mission.get_next_nav_cmd(i, cmd);
+	      _mission.read_cmd_from_storage(i, cmd);
 
 	      if(cmd.id == MAV_CMD_DO_DISABLE_HWP)
 	      {
@@ -109,7 +109,7 @@ void AP_HeadWindLanding::check_no_landing_area_defined(void)
     // Start iterating from the end of the mission
     for(int16_t i=num_cmd-1; i>=0; i--)
     {
-		_mission.get_next_nav_cmd(i, current_cmd);
+		_mission.read_cmd_from_storage(i, current_cmd);
 
 		if(current_cmd.id == MAV_CMD_SET_FORBIDDEN_ZONE)
 		{
@@ -132,12 +132,12 @@ void AP_HeadWindLanding::calc_index_landing_waypoint(void)
 
     // Command item used for iterating through the mission
     AP_Mission::Mission_Command current_cmd;
+	idx_landing_wp = -1;
 
-    // Start iterating from the end of the mission
-    for(int16_t i=num_cmd-1; i>=0; i--)
+    // Start iterating from the start of mission
+    for(int16_t i=1; i<num_cmd; i++)
     {
-		_mission.get_next_nav_cmd(i, current_cmd);
-
+		_mission.read_cmd_from_storage(i, current_cmd);
 		if(current_cmd.id == MAV_CMD_NAV_LAND)
 		{
 			idx_landing_wp = current_cmd.index;
@@ -163,7 +163,7 @@ void AP_HeadWindLanding::calc_index_last_mission_waypoint(void)
     // Start iterating from the end of the mission, looking for the n-th last DO_NAV waypoint.
     for(int16_t i=num_cmd-1; i>=0; i--)
     {
-		_mission.get_next_nav_cmd(i, current_cmd);
+		_mission.read_cmd_from_storage(i, current_cmd);
 
 		if(current_cmd.id == MAV_CMD_NAV_WAYPOINT)
 		{
@@ -193,7 +193,7 @@ void AP_HeadWindLanding::calc_index_hw_waypoints()
     // Start iterating from the end of the mission, looking for the n-th last DO_NAV waypoint.
     for(int16_t i=num_cmd-1; i>=0; i--)
     {
-		_mission.get_next_nav_cmd(i, current_cmd);
+		_mission.read_cmd_from_storage(i, current_cmd);
 
 		if(current_cmd.id == MAV_CMD_NAV_WAYPOINT)
 			++curr_num_nav_cmd_idx;
@@ -231,26 +231,25 @@ void AP_HeadWindLanding::generate_hw_waypoints(const MC& cmd)
 		// just before the landing waypoint
 
 		// Retrieve the landing waypoint from the mission
-		AP_Mission::Mission_Command wp;
 		// The index of the mission starts from 0.
-		_mission.get_next_nav_cmd(idx_landing_wp, wp);
+		_mission.read_cmd_from_storage(idx_landing_wp, wpLandOriginal);
 
 		// Conversion of latitude and longitude from degrees to meters -------------------
 		// (The reference WP for the conversion is the landing WP)
 		// More information at: https://knowledge.safe.com/articles/725/calculating-accurate-length-in-meters-for-lat-long.html
-		float lat = wp.content.location.lat*TO_DEG_FORMAT;
-		float lng = wp.content.location.lng*TO_DEG_FORMAT;
+		float lat = wpLandOriginal.content.location.lat*TO_DEG_FORMAT;
+		float lng = wpLandOriginal.content.location.lng*TO_DEG_FORMAT;
 
 		float mdlat = METERS_PER_DEG_LAT(lat);
 		float mdlng = METERS_PER_DEG_LNG(lat);
 
 		// Coordinates of the virtual waypoints
 		Location loc_hwp1, loc_hwp2, loc_hwp3, loc_hwp4;
-		Location land_wp = wp.content.location;
+		Location land_wp = wpLandOriginal.content.location;
 
 		// Retrieve the last mission waypoint from the mission
 		AP_Mission::Mission_Command last_mwp;
-		_mission.get_next_nav_cmd(idx_last_mission_wp, last_mwp);
+		_mission.read_cmd_from_storage(idx_last_mission_wp, last_mwp);
 
 		// -------------------------------------------------------------------------------
 		// The following check prevents to have more than 15 degrees of drop between the
@@ -301,7 +300,7 @@ void AP_HeadWindLanding::generate_hw_waypoints(const MC& cmd)
 		//thetaWind = 90.0; //debug line. remove it later
 
 		// TODO: rename wp to land_wp
-		theta_hwp = calc_theta_hwp(thetaWind,last_mwp,wp);
+		theta_hwp = calc_theta_hwp(thetaWind, last_mwp, wpLandOriginal);
 
 		float theta_hwp_rad = theta_hwp*M_PI/180.0f;
 
@@ -365,14 +364,14 @@ void AP_HeadWindLanding::generate_hw_waypoints(const MC& cmd)
 		bool use_hwp4 = false;
 
 		// we need to check just one single line on intersection
-		Location P1 = newPos(wp.content.location, begin_no_landing_area, hwp_radius);
-		bool isIntersects = DoLineSegmentsIntersect(last_mwp.content.location.lng, last_mwp.content.location.lat, loc_hwp3.lng, loc_hwp3.lat, wp.content.location.lng, wp.content.location.lat,	P1.lng, P1.lat);
+		Location P1 = newPos(wpLandOriginal.content.location, begin_no_landing_area, hwp_radius);
+		bool isIntersects = DoLineSegmentsIntersect(last_mwp.content.location.lng, last_mwp.content.location.lat, loc_hwp3.lng, loc_hwp3.lat, wpLandOriginal.content.location.lng, wpLandOriginal.content.location.lat,	P1.lng, P1.lat);
 
 		if(isIntersects) { use_hwp4 = true; }
 
 		if(use_hwp4)
 		{
-			int bearing = getBearing(last_mwp.content.location, wp.content.location);
+			int bearing = getBearing(last_mwp.content.location, wpLandOriginal.content.location);
 			loc_hwp4.lat = land_wp.lat + dist_hwpl_4 * cos(bearing * DEG_TO_RAD) / mdlat * 10000000.0f;
 			loc_hwp4.lng = land_wp.lng + dist_hwpl_4 * sin(bearing * DEG_TO_RAD) / mdlng * 10000000.0f;
 			loc_hwp4.alt = last_mwp.content.location.alt;
@@ -395,14 +394,18 @@ void AP_HeadWindLanding::generate_hw_waypoints(const MC& cmd)
 
 		if(hwp_enabled)
 		{
-			_mission.truncate(idx_landing_wp);
-			if(use_hwp4){ _mission.add_cmd(hwp4); } // Add HWP4 only if it realy needed
-			_mission.add_cmd(hwp3);
-			_mission.add_cmd(hwp2);
-			// _mission.add_cmd(reduce_speed);
-			_mission.add_cmd(hwp1);
-			// For the moment the UAV will still land at the original landing waypoint
-			_mission.add_cmd(wp);
+			int idx = idx_landing_wp;
+			if(use_hwp4)
+			{
+				addWPAtIndex(idx, hwp4);
+				idx++;
+			}
+			addWPAtIndex(idx, hwp3);
+			idx++;
+			addWPAtIndex(idx, hwp2);
+			idx++;
+			addWPAtIndex(idx, hwp1);
+			idx++;
 		}
 
 		hwp_status = HWP_GENERATED;
@@ -411,6 +414,31 @@ void AP_HeadWindLanding::generate_hw_waypoints(const MC& cmd)
 
     }
 
+}
+bool AP_HeadWindLanding::addWPAtIndex(uint16_t idx, AP_Mission::Mission_Command& wp)
+{
+	AP_Mission::Mission_Command wpTmp;
+	if(_mission.read_cmd_from_storage(idx, wpTmp))
+	{
+		_mission.replace_cmd(idx, wp);
+		return addWPAtIndex(idx+1, wpTmp);
+	} else
+	{
+		return _mission.add_cmd(wp);
+	}
+
+}
+
+bool AP_HeadWindLanding::removeWPAtIndex(uint16_t idx)
+{
+	AP_Mission::Mission_Command wpTmp;
+	if(_mission.read_cmd_from_storage(idx+1, wpTmp))
+	{
+		_mission.replace_cmd(idx, wpTmp);
+		return removeWPAtIndex(idx+1);
+	}
+	_mission.truncate(idx);
+	return true;
 }
 
 // line segments crossing check. 
@@ -457,7 +485,7 @@ void AP_HeadWindLanding::update_num_commands()
 {
     // num_cmd is updated with the total number of commands after adding the virtual waypoints
     if(hwp_status > HWP_INITIALIZED)
-	num_cmd = _mission.num_commands();
+    	num_cmd = _mission.num_commands();
 }
 
 bool AP_HeadWindLanding::check_crossing_no_landing_zone(MC &last_mwp, MC &land_wp, MC &lta_wp, float begin_area, float end_area)
@@ -578,24 +606,27 @@ void AP_HeadWindLanding::restore_mission()
     // If I generate the virtual waypoints, I can remove them and restore the mission to its original state.
     if(hwp_enabled && hwp_status == HWP_GENERATED)
     {
-		// Here I restore the original version of the mission (in case it should be reloaded)
-		AP_Mission::Mission_Command wp;
+		// I add the current waypoint (landing waypoint) as the last item
+		_mission.replace_cmd(idx_landing_wp, wpLandOriginal);
+	    AP_Mission::Mission_Command current_cmd;
 
-		// The variable wp will contain the landinig waypoint that I need to restore
-		_mission.get_next_nav_cmd(num_cmd-1, wp);
-
-		// If the last command is the landing (safety check)
-		if(wp.id==MAV_CMD_NAV_LAND)
-		{
-			// I remove the mission items starting from the index of the original landing waypoint
-			_mission.truncate(idx_landing_wp);
-			// I add the current waypoint (landing waypoint) as the last item
-			_mission.add_cmd(wp);
-		}
-
+	    // Start iterating from the end of the mission
+	    uint16_t idx = idx_landing_wp+1;
+	    while(_mission.read_cmd_from_storage(idx, current_cmd))
+	    {
+	/* remove all waypoints after landing command */
+			if( current_cmd.id == MAV_CMD_NAV_WAYPOINT ||
+				current_cmd.id == MAV_CMD_NAV_LAND ||
+				current_cmd.id == MAV_CMD_NAV_LOITER_TO_ALT)
+			{
+				removeWPAtIndex(idx);
+			} else
+			{
+				idx++;
+			}
+	    }
 		// Change the status
 		hwp_status = HWP_REMOVED;
-
 		update_num_commands();
     }
 }

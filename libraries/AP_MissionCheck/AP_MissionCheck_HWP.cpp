@@ -9,6 +9,7 @@
 #include <stdio.h>
 
 #include "AP_MissionCheck_HWP.h"
+#include <AP_Mission/AP_Mission.h>
 
 MissionCheck_HWP::MissionCheck_HWP(AP_Mission &mission, DataFlash_Class &dataflash, AP_HeadWindLanding &headwind_wp, GCS& gcs) :
 	MissionCheck(mission,dataflash,gcs), _headwind_wp(headwind_wp)
@@ -28,11 +29,20 @@ void MissionCheck_HWP::notify_user()
     // The idea of this function is to drive the LED to notify the USER about possible errors
 }
 
+bool MissionCheck_HWP::check(Location currentPosition)
+{
+
+	if(update_land_waypoint(currentPosition))
+	{
+		asprintf(&msg,"LAND AT CURRENT POS");
+		logInfo(msg);
+	}
+	return check();
+}
+
 bool MissionCheck_HWP::check()
 {
-    
     // Here I check the basic requirements for using the VWP feature
-  
     if(!is_takeoff_wp_present())
     {
 		hwp_feature_usable = false;
@@ -55,7 +65,6 @@ bool MissionCheck_HWP::check()
     }
     
     return hwp_feature_usable;
-  
 }
 
 bool MissionCheck_HWP::is_landing_sequence_present()

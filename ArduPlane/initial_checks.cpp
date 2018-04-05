@@ -142,7 +142,22 @@ bool Plane::check_mission()
 	else
 		mission_checker = new MissionCheck_STD{mission,DataFlash,_gcs};
 
-	bool successfull = mission_checker->check();
+	bool successfull = false;
+	Location loc;
+
+	if(ahrs.get_location(loc))
+	{
+		successfull = mission_checker->check(loc);
+	}
+	else if(gps.status() >= AP_GPS::GPS_OK_FIX_2D)
+	{
+		successfull = mission_checker->check(plane.current_loc);
+	}
+	else
+	{
+		successfull = mission_checker->check();
+	}
+
 
 	if(successfull)
 	{
