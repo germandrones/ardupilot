@@ -19,7 +19,7 @@ MissionCheck_HWP::MissionCheck_HWP(AP_Mission &mission, DataFlash_Class &datafla
 
 void MissionCheck_HWP::init_mission()
 {
-    asprintf(&msg,"INIT VWP Mission");
+    asprintf(&msg,"INIT HWP Mission");
     logInfo(msg);
     _headwind_wp.init_HWP();
 }

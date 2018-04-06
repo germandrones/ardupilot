@@ -25,36 +25,43 @@ MissionCheck::MissionCheck(AP_Mission& mission, DataFlash_Class &dataflash, GCS&
 bool MissionCheck::update_land_waypoint(Location currentPosition)
 {
 	if(is_landing_wp_present() && !is_return_wp_present())
-		return true; // normal landing at position in mission
+		return false; // normal landing at position in mission
 	if(is_takeoff_wp_present()) // we need take-off for transition altitude
 	{
 		AP_Mission::Mission_Command cmdLand;
 		AP_Mission::Mission_Command cmdTakeOff;
-		AP_Mission::Mission_Command cmdReturn;
 		bool result = true;
-		if(_mission.get_next_nav_cmd(index_takeoff_waypoint, cmdTakeOff))
+		if(_mission.read_cmd_from_storage(index_takeoff_waypoint, cmdTakeOff))
 		{
-			cmdLand.id = MAV_CMD_NAV_LAND;
-			if(check_latlng(currentPosition)){
-				cmdLand.content.location = currentPosition;// use current position for landing
+				cmdLand.id = MAV_CMD_NAV_LAND;
+				if(check_latlng(currentPosition)){
+					cmdLand.content.location = currentPosition;// use current position for landing
+					cmdTakeOff.content.location.lat = currentPosition.lat;
+					cmdTakeOff.content.location.lng = currentPosition.lng; // update take off position
+					result &= _mission.replace_cmd(index_takeoff_waypoint, cmdTakeOff);
+				} else{
+					cmdLand.content.location = cmdTakeOff.content.location;
+				}
+
 				cmdLand.content.location.alt = cmdTakeOff.content.location.alt; // use takeoff alt for transition
 				cmdLand.content.location.flags = cmdTakeOff.content.location.flags;
 
-				cmdReturn = cmdLand; // copy pos and alt
-				cmdReturn.id = MAV_CMD_NAV_RETURN_TO_LAUNCH; // change id
 
 				if(is_landing_wp_present())
 					result &= _mission.replace_cmd(index_landing_waypoint, cmdLand);
 				else
 					result &= _mission.add_cmd(cmdLand);
-				if(is_return_wp_present())
-					result &= _mission.replace_cmd(index_return_waypoint, cmdReturn);
-				else
+				// this is used to remember that this is a return to launch mission
+				if(!is_return_wp_present())
+				{
+					AP_Mission::Mission_Command cmdReturn;
+					cmdReturn = cmdLand; // copy pos and alt
+					cmdReturn.id = MAV_CMD_NAV_RETURN_TO_LAUNCH; // change id
 					result &= _mission.add_cmd(cmdReturn);
+				}
 				inspect_stored_mission();
 				if(result)
 					return true;
-			}
 		}
 		// if we come here something went wrong so delete landing point
 		if(is_landing_wp_present())
@@ -75,7 +82,7 @@ void MissionCheck::inspect_stored_mission()
   
   for(uint16_t i = 0; i < num_items; i++)
   {
-      _mission.get_next_nav_cmd(i, cmd);
+      _mission.read_cmd_from_storage(i, cmd);
       
       if(cmd.id == MAV_CMD_NAV_TAKEOFF && index_takeoff_waypoint==-1) // only first in mission
       {
@@ -111,7 +118,7 @@ int16_t MissionCheck::get_index_last_nav_WP()
     // Start iterating from the end of the mission, looking for the n-th last DO_NAV waypoint.
     for(int16_t i=num_cmd-1; i>=0; i--)
     {
-		_mission.get_next_nav_cmd(i, current_cmd);
+		_mission.read_cmd_from_storage(i, current_cmd);
 		// If the current command is a NAV command
 		if(current_cmd.id == MAV_CMD_NAV_WAYPOINT)
 			return current_cmd.index;
@@ -124,6 +131,6 @@ int16_t MissionCheck::get_index_last_nav_WP()
 
 void MissionCheck::logInfo(char* _msg)
 {
-    _gcs.send_text(MAV_SEVERITY_CRITICAL,_msg);
+    _gcs.send_text(MAV_SEVERITY_NOTICE,_msg);
     _dataflash.Log_Write_Message(_msg);
 }

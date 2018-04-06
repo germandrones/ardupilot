@@ -55,8 +55,8 @@ AP_HeadWindLanding::AP_HeadWindLanding(AP_Mission &mission, AP_AHRS_NavEKF &ahrs
 
 void AP_HeadWindLanding::init_HWP(void)
 {
-    num_cmd = _mission.num_commands();
-
+	num_cmd = _mission.num_commands();
+	restore_mission();
     // I initialize all the indexes with default values
     idx_landing_wp = -1;
     idx_last_mission_wp = -1;
@@ -627,6 +627,7 @@ void AP_HeadWindLanding::restore_mission()
 	    }
 		// Change the status
 		hwp_status = HWP_REMOVED;
+		is_hwp_received = false;
 		update_num_commands();
     }
 }

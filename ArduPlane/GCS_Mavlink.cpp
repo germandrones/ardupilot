@@ -2207,9 +2207,8 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
 		if(is_mission_uploaded())
 		{
 			int num_commands = plane.mission.num_commands();
+			bool mission_checked = false;
 
-			// By default, PixHawk is supposed to check the mission with the HWP feature enabled
-			plane.mission_checker = new MissionCheck_HWP{plane.mission,plane.DataFlash,plane.headwind_wp,plane._gcs};
 			if(!plane.headwind_wp.is_hwp_enabled())
 			{
 				plane.headwind_wp.temporarily_enable();
@@ -2222,13 +2221,11 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
 				if(plane.mission.get_command_id(i) == MAV_CMD_DO_DISABLE_HWP)
 				{
 					plane.headwind_wp.temporarily_disable();
-					plane.mission_checker = new MissionCheck_STD{plane.mission,plane.DataFlash,plane._gcs};
 					gcs().send_text(MAV_SEVERITY_NOTICE, "Found HWP disable command");
 					break;
 				}
 			}
-			// Preliminary check of the mission
-			plane.mission_checker->check();
+			plane.check_mission();
 		}
 
 		break;

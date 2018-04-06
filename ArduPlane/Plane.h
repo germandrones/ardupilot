@@ -820,7 +820,7 @@ private:
 
     } gd_status;
 
-    MissionCheck* mission_checker;
+//    MissionCheck* mission_checker;
 
     bool check_mission();
 
