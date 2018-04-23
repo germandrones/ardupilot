@@ -94,6 +94,15 @@ public:
     /// Read the battery voltage and current for all batteries.  Should be called at 10hz
     void read();
 
+    void setHil(float volt, float amps, float mAh)
+    {
+    	state[AP_BATT_PRIMARY_INSTANCE].voltage = volt;
+    	state[AP_BATT_PRIMARY_INSTANCE].current_amps = amps;
+    	state[AP_BATT_PRIMARY_INSTANCE].current_total_mah = mAh;
+    	state[AP_BATT_PRIMARY_INSTANCE].last_time_micros = AP_HAL::micros();
+    	state[AP_BATT_PRIMARY_INSTANCE].healthy = true;
+    };
+
 #define _BattMonitor_STATE(instance) state[instance]
 
     // healthy - returns true if monitor is functioning

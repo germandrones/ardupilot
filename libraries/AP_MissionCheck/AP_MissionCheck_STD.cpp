@@ -76,6 +76,7 @@ bool MissionCheck_STD::is_landing_sequence_present()
 	bool landing_point_found = false;
 	bool wp_for_transition_found = false;
 	bool loiter_to_altitude_found = false;
+	Location landWp;
 
 	// The above three commands must be consecutive (excluding the do commands)
 
@@ -85,9 +86,13 @@ bool MissionCheck_STD::is_landing_sequence_present()
 
 	if(is_landing_wp_present())
 	{
-		landing_point_found = true;
-		asprintf(&msg,"STD: LANDING POINT FOUND");
-		logInfo(msg);
+		if(_mission.read_cmd_from_storage(get_index_landing_wp(), cmd))
+		{
+			landing_point_found = true;
+			landWp = cmd.content.location;
+			asprintf(&msg,"STD: Land WP Found");
+			logInfo(msg);
+		}
 	}
 
 	if(!landing_point_found)
@@ -96,25 +101,47 @@ bool MissionCheck_STD::is_landing_sequence_present()
 	// Search for loiter to altitude waypoint starting from the end of the mission
 	for(uint16_t i = num_items-1; i > 0; i--)
 	{
-		_mission.get_next_nav_cmd(i, cmd);
+		_mission.read_cmd_from_storage(i, cmd);
 
 		if(cmd.id == MAV_CMD_NAV_LOITER_TO_ALT)
 		{
-			loiter_to_altitude_found = true;
-			loiter_to_altitude_index = cmd.index;
-			asprintf(&msg,"STD: LTA CMD FOUND");
-			logInfo(msg);
+			if(landWp.flags.relative_alt == cmd.content.location.flags.relative_alt &&
+					abs(landWp.alt - cmd.content.location.alt)<1000)
+			{
+				loiter_to_altitude_found = true;
+				loiter_to_altitude_index = cmd.index;
+				asprintf(&msg,"STD: Loiter WP found");
+				logInfo(msg);
+			}
 		}
 	}
 
 	if(!loiter_to_altitude_found)
+	{
+		if(_mission.read_cmd_from_storage(get_index_landing_wp()-2 , cmd)) // read waypoint before landing
+		{
+			if(cmd.id == MAV_CMD_NAV_WAYPOINT)
+			{
+				if(landWp.flags.relative_alt == cmd.content.location.flags.relative_alt &&
+						abs(landWp.alt - cmd.content.location.alt)<1000)
+				{
+					loiter_to_altitude_found = true;
+					loiter_to_altitude_index = cmd.index;
+					asprintf(&msg,"STD: Decent WP found");
+					logInfo(msg);
+				}
+			}
+		}
+	}
+	if(!loiter_to_altitude_found)
+	{
 		return false;
-
+	}
 	// Count how many navigation waypoints between loter to altitude and land
 	int num_nav_commands_found = 0;
 	for(uint16_t i = loiter_to_altitude_index; i < get_index_landing_wp(); i++)
 	{
-		_mission.get_next_nav_cmd(i, cmd);
+		_mission.read_cmd_from_storage(i, cmd);
 
 		if(cmd.id == MAV_CMD_NAV_WAYPOINT)
 		{

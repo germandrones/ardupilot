@@ -1868,6 +1868,19 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
         break;
     }
 
+/*    case MAVLINK_MSG_ID_BATTERY_STATUS:
+    {
+#if HIL_SUPPORT
+        if (plane.g.hil_mode != 1) {
+            break;
+        }
+        mavlink_battery_status_t packet;
+        mavlink_msg_battery_status_decode(msg, &packet);
+        plane.battery.state[0].current_amps = packet.current_battery/100.0f;
+
+#endif
+        break;
+    }*/
     case MAVLINK_MSG_ID_HIL_STATE:
     {
 #if HIL_SUPPORT
@@ -1879,6 +1892,7 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
             hilStart++;
             break;
         }
+        uint32_t dt = AP_HAL::millis() - plane.failsafe.last_heartbeat_ms;
         plane.failsafe.last_heartbeat_ms = AP_HAL::millis();
         hilCounter++;
         if((AP_HAL::millis()-hilFreqTimer)>=1000)
@@ -1898,7 +1912,17 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
         }
 
         last_hil_state = packet;
-
+        float amps = 0;
+        if(plane.arming.is_armed())
+        {
+        	amps = 8.4;//1 + 120*plane.throttle_percentage()/100.0f;
+        }
+        float mah = plane.battery.current_total_mah() + (amps*dt/1000.0f)/3600.0f;
+        if(!plane.arming.is_armed())
+        {
+        	mah = 0;
+        }
+        plane.battery.setHil(30.1f, amps, mah);
         // set gps hil sensor
         Location loc;
         memset(&loc, 0, sizeof(loc));
@@ -1951,6 +1975,8 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
             attiResetCount++;
             //gcs().send_text(MAV_SEVERITY_DEBUG, "HIL reset atti %i", attiResetCount);
         }
+
+
 #endif
         break;
     }
