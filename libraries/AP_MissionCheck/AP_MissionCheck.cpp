@@ -26,7 +26,7 @@ bool MissionCheck::update_land_waypoint(Location currentPosition)
 {
 	if(is_landing_wp_present() && !is_return_wp_present())
 		return false; // normal landing at position in mission
-	if(is_takeoff_wp_present()) // we need take-off for transition altitude
+	if(is_takeoff_wp_present()) // we need take-off point for transition altitude
 	{
 		AP_Mission::Mission_Command cmdLand;
 		AP_Mission::Mission_Command cmdTakeOff;

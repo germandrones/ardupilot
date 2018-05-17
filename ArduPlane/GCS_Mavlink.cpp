@@ -2230,7 +2230,8 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
 		handle_common_message(msg);
 
 		// The following check is enabled only when the full mission has been uploaded
-		if(is_mission_uploaded())
+		// only when not armed
+		if(is_mission_uploaded() && !plane.arming.is_armed())
 		{
 			int num_commands = plane.mission.num_commands();
 			bool mission_checked = false;

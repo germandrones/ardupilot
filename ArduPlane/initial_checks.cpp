@@ -46,7 +46,7 @@ void Plane::initial_checks()
 		// For every other message we need to be in disarmed state and not flying
 		else
 		{
-			if(arming.is_armed())
+/*			if(arming.is_armed())
 				gcs().send_text(MAV_SEVERITY_CRITICAL, "A: UAV IS ARMED");
 			else
 				gcs().send_text(MAV_SEVERITY_CRITICAL, "A: UAV IS DISARMED");
@@ -55,7 +55,7 @@ void Plane::initial_checks()
 				gcs().send_text(MAV_SEVERITY_CRITICAL, "A: UAV IS FLYING");
 			else
 				gcs().send_text(MAV_SEVERITY_CRITICAL, "A: UAV IS NOT FLYING");
-
+*/
 			if(!arming.is_armed() && plane.is_flying() == false)
 			{
 				switch(plane.gd_status.err_num)
