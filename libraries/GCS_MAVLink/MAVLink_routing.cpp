@@ -97,6 +97,11 @@ bool MAVLink_routing::check_and_forward(mavlink_channel_t in_channel, const mavl
         return true;
     }
 
+    if(msg->sysid == 12) // do not forward gd pilot data (this is confusing the TRIP2)
+    {
+    	return true;
+    }
+
     // learn new routes
     learn_route(in_channel, msg);
 
