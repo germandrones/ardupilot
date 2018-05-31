@@ -2233,25 +2233,6 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
 		// only when not armed
 		if(is_mission_uploaded() && !plane.arming.is_armed())
 		{
-			int num_commands = plane.mission.num_commands();
-			bool mission_checked = false;
-
-			if(!plane.headwind_wp.is_hwp_enabled())
-			{
-				plane.headwind_wp.temporarily_enable();
-			}
-
-			for(int i = 0; i < num_commands; i++)
-			{
-				// If I found the command MAV_CMD_HWP the HWP feature is disabled and I have to check is the mission
-				// follows the rules of the default mission
-				if(plane.mission.get_command_id(i) == MAV_CMD_DO_DISABLE_HWP)
-				{
-					plane.headwind_wp.temporarily_disable();
-					gcs().send_text(MAV_SEVERITY_NOTICE, "Found HWP disable command");
-					break;
-				}
-			}
 			plane.check_mission();
 		}
 
