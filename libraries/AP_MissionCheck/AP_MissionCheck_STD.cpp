@@ -118,7 +118,35 @@ bool MissionCheck_STD::is_landing_sequence_present()
 
 	if(!loiter_to_altitude_found)
 	{
+		if(_mission.read_cmd_from_storage(get_index_landing_wp()-1 , cmd)) // read waypoint before landing
+		{
+			if(cmd.id == MAV_CMD_NAV_WAYPOINT)
+			{
+				if(landWp.flags.relative_alt == cmd.content.location.flags.relative_alt &&
+						abs(landWp.alt - cmd.content.location.alt)<1000)
+				{
+					loiter_to_altitude_found = true;
+					loiter_to_altitude_index = cmd.index;
+					asprintf(&msg,"STD: Decent WP found");
+					logInfo(msg);
+				}
+			}
+		}
 		if(_mission.read_cmd_from_storage(get_index_landing_wp()-2 , cmd)) // read waypoint before landing
+		{
+			if(cmd.id == MAV_CMD_NAV_WAYPOINT)
+			{
+				if(landWp.flags.relative_alt == cmd.content.location.flags.relative_alt &&
+						abs(landWp.alt - cmd.content.location.alt)<1000)
+				{
+					loiter_to_altitude_found = true;
+					loiter_to_altitude_index = cmd.index;
+					asprintf(&msg,"STD: Decent WP found");
+					logInfo(msg);
+				}
+			}
+		}
+		if(_mission.read_cmd_from_storage(get_index_landing_wp()-3 , cmd)) // read waypoint before landing
 		{
 			if(cmd.id == MAV_CMD_NAV_WAYPOINT)
 			{
