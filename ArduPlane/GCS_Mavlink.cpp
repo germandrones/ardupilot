@@ -2240,8 +2240,7 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
     // get responce message from GCS
     case MAVLINK_MSG_ID_HWP:
     {
-	    gcs().send_text(MAV_SEVERITY_NOTICE, "HWP ECHO RECEIVED");
-        
+	    gcs().send_text(MAV_SEVERITY_NOTICE, "HWP Generated");
         plane.headwind_wp.ack_echo_received();
         break;
     }
@@ -2250,12 +2249,15 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
     {
         mavlink_log_info_request_t msg_file_id;
         mavlink_msg_log_info_request_decode(msg,&msg_file_id);
+
+        // message from GCS with file_id == 0 will be also forwarded to GDPilot, GD will answer on it
         if(msg_file_id.id != 0)
         {
             gcs().send_text(MAV_SEVERITY_NOTICE, "GD Log Filename: LOG%05u.bin", msg_file_id.id);
-            gcs().send_text(MAV_SEVERITY_NOTICE, "PX Log Filename: %08u.bin", plane.DataFlash.find_last_log());
             gcs().send_text(MAV_SEVERITY_NOTICE, "SongbirdGD-3.8.0 (%.8s)", msg_file_id.gitHash);
+            plane.Log_Write_GD_file_id(msg_file_id.id);// save GD file ID to PX4 logfile
         }
+        gcs().send_text(MAV_SEVERITY_NOTICE, "PX Log Filename: %08u.bin", plane.DataFlash.find_last_log());
         break;
     }
 

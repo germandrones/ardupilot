@@ -891,6 +891,7 @@ private:
     void Log_Write_AOA_SSA();
     void Log_Write_AETR();
     void Log_Write_HWP(int _mid, float _lat, float _lon, float _alt, int _ishwp);
+    void Log_Write_GD_file_id(int id);
 
     void gcs_send_hwp_info(const AP_Mission::Mission_Command &cmd);
 
