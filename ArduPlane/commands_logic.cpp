@@ -238,6 +238,7 @@ bool Plane::start_command(const AP_Mission::Mission_Command& cmd)
     // devices such as cameras.
     //    |Region of interest mode. (see MAV_ROI enum)| Waypoint index/ target ID. (see MAV_ROI enum)| ROI index (allows a vehicle to manage multiple cameras etc.)| Empty| x the location of the fixed ROI (see MAV_FRAME)| y| z|
     case MAV_CMD_DO_SET_ROI:
+        gcs().send_text(MAV_SEVERITY_INFO,"Automission says set ROI");
         if (cmd.content.location.alt == 0 && cmd.content.location.lat == 0 && cmd.content.location.lng == 0) {
             // switch off the camera tracking if enabled
             if (camera_mount.get_mode() == MAV_MOUNT_MODE_GPS_POINT) {

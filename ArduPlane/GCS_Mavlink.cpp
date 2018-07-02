@@ -1394,6 +1394,8 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
         // Sets the region of interest (ROI) for the camera
         case MAV_CMD_DO_SET_ROI:
             // sanity check location
+            gcs().send_text(MAV_SEVERITY_INFO,"GCS says set ROI...");
+
             if (!check_latlng(packet.param5, packet.param6)) {
                 break;
             }
