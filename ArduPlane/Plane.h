@@ -861,6 +861,8 @@ private:
     // Send Hedwind Waypoints to GCS
     void send_hwp_message(mavlink_channel_t chan);
 
+    void send_trip_message(mavlink_channel_t chan, int32_t lat, int32_t lng, int32_t alt);
+
     bool ack_to_gdpilot_must_be_sent;
 
     void send_aoa_ssa(mavlink_channel_t chan);

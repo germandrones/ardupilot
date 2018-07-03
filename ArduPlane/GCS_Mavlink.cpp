@@ -198,6 +198,35 @@ void Plane::send_hwp_message(mavlink_channel_t chan)
 	mavlink_msg_hwp_send(chan, hwp_lat1,hwp_lng1,hwp_lat2,hwp_lng2,hwp_lat3,hwp_lng3,hwp_lat4,hwp_lng4);
 }
 
+void Plane::send_trip_message(mavlink_channel_t chan, int32_t lat, int32_t lng, int32_t alt)
+{
+    mavlink_v2_extension_t MetaData;
+    MetaData.target_component = 0; // 0 for broadcast
+    MetaData.target_network = 0;
+    MetaData.target_system = 0;
+    MetaData.message_type = 0x01; // colibri message
+
+    MetaData.ptc_cam_lat = lat;
+    MetaData.ptc_cam_lng = lng;
+    MetaData.ptc_cam_alt = alt;
+    MetaData.los_gnd_lat = 0;
+    MetaData.los_gnd_lng = 0;
+    MetaData.los_gnd_alt = 0;
+    
+    uint8_t ColibData[20] = {
+        0xB0, 0x3B, 0x77, 0x04, 0x21, 0x00, 0x00, 0x00, 0x00, 0x0F,              /* Colirbi Packet bytes 0 - 9 */
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x80, 0x80, 0x00, 0x12,              /* Colirbi Packet bytes 10 - 19 */
+    };
+
+    mav_array_memcpy(MetaData.payload, ColibData, sizeof(uint8_t)*20);
+
+    mavlink_msg_v2_extension_send_struct(chan, &MetaData);
+    
+    //debug messages
+    gcs().send_text(MAV_SEVERITY_INFO,"TRIP module set ROI... to lat: %d, lng: %d, alt: %d", lat, lng, alt);
+    gcs().send_text(MAV_SEVERITY_INFO,"TRIP packet size: %d", sizeof(MetaData));
+}
+
 void Plane::send_location_neitzke(mavlink_channel_t chan)
 {
 
@@ -1394,8 +1423,6 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
         // Sets the region of interest (ROI) for the camera
         case MAV_CMD_DO_SET_ROI:
             // sanity check location
-            gcs().send_text(MAV_SEVERITY_INFO,"GCS says set ROI...");
-
             if (!check_latlng(packet.param5, packet.param6)) {
                 break;
             }
@@ -1411,7 +1438,11 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
             } else {
                 // send the command to the camera mount
                 plane.camera_mount.set_roi_target(roi_loc);
+
+                // send message to TRIP
+                plane.send_trip_message((mavlink_channel_t)0, roi_loc.lat, roi_loc.lng, roi_loc.alt); // broadcast message
             }
+
             result = MAV_RESULT_ACCEPTED;
             break;
 #endif
