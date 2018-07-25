@@ -242,6 +242,16 @@ void Plane::read_radio()
 
 void Plane::control_failsafe(uint16_t pwm)
 {
+	// create a time out for overrides to be able to take over on normal RC channel if overrides fail
+	if(failsafe.last_valid_rc_mavlink_ms!=0) // we had overrides
+	{
+		if(millis() - failsafe.last_valid_rc_mavlink_ms > 300) // timeout
+		{
+			hal.rcin->clear_overrides(); // clear overrides
+			failsafe.last_valid_rc_mavlink_ms = 0;
+		}
+	}
+
     if (millis() - failsafe.last_valid_rc_ms > 1000 || rc_failsafe_active()) {
         // we do not have valid RC input. Set all primary channel
         // control inputs to the trim value and throttle to min

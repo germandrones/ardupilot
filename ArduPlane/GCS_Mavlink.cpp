@@ -1803,6 +1803,7 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
 
         if (hal.rcin->set_overrides(v, 8)) {
             plane.failsafe.last_valid_rc_ms = AP_HAL::millis();
+            plane.failsafe.last_valid_rc_mavlink_ms = plane.failsafe.last_valid_rc_ms;
             plane.failsafe.AFS_last_valid_rc_ms =  plane.failsafe.last_valid_rc_ms;
         }
 
