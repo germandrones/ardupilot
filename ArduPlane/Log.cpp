@@ -392,6 +392,24 @@ void Plane::Log_Write_HWP(int _mid, float _lat, float _lon, float _alt, int _ish
     DataFlash.WriteBlock(&pkt, sizeof(pkt));
 }
 
+struct PACKED log_GD_File_ID {
+    LOG_PACKET_HEADER;
+    uint64_t time_us;
+    int      id;
+};
+
+void Plane::Log_Write_GD_file_id(int _id)
+{
+    struct log_GD_File_ID pkt = 
+    {
+        LOG_PACKET_HEADER_INIT(LOG_GD_FILE_ID_MSG),
+        time_us	: AP_HAL::micros64(),
+        id   : _id
+    };
+    DataFlash.WriteBlock(&pkt, sizeof(pkt));
+    gcs().send_text(MAV_SEVERITY_NOTICE, "log saved");
+}
+
 const struct LogStructure Plane::log_structure[] = {
     LOG_COMMON_STRUCTURES,
     { LOG_PERFORMANCE_MSG, sizeof(log_Performance), 
@@ -415,6 +433,7 @@ const struct LogStructure Plane::log_structure[] = {
     { LOG_AOA_SSA_MSG, sizeof(log_AOA_SSA),
       "AOA", "Qff", "TimeUS,AOA,SSA" },
 	{ LOG_HWP_MSG, sizeof(log_HWP), "HWP", "Qifffi", "TimeUS,idWP,lat,lon,alt,isHWP"},
+    { LOG_GD_FILE_ID_MSG, sizeof(log_GD_File_ID), "GDF", "Qi", "TimeUS,fileID"},
 #if OPTFLOW == ENABLED
     { LOG_OPTFLOW_MSG, sizeof(log_Optflow),
       "OF",   "QBffff",   "TimeUS,Qual,flowX,flowY,bodyX,bodyY" },
