@@ -223,7 +223,7 @@ void AP_HeadWindLanding::generate_hw_waypoints(const MC& cmd)
 {
 
     // Check if the current cmd is where I should generate the virtual waypoints and there are no errors
-    if(cmd.index == idx_hwp && all_conditions_satisfied())
+    if(cmd.index >= idx_hwp && all_conditions_satisfied())
     {
 		//GCS_SEND_MSG("Generating VWP: %d",cmd.index);
 
