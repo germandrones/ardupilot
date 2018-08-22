@@ -141,6 +141,8 @@ void AP_HeadWindLanding::calc_index_landing_waypoint(void)
 		if(current_cmd.id == MAV_CMD_NAV_LAND)
 		{
 			idx_landing_wp = current_cmd.index;
+			// check if original mission is as terrain following mode defined
+			is_terrain_alt_mode = current_cmd.content.location.flags.terrain_alt;
 			break;
 		}
     }
@@ -390,7 +392,25 @@ void AP_HeadWindLanding::generate_hw_waypoints(const MC& cmd)
 		// Before adding the HWP waypoints to the mission, we need to check if the segment connecting the last mission waypoint
 		// and the farthest HWP waypoint (LTA) intersect the no landing zone. If yes, we need to add one more waypoint. This fourth
 		// waypoint is a mirror of the last mission waypoint w.r.t to the landing waypoint.
-		// TODO: Finish implementation
+
+
+		// If Original mission was stored as terrain following mode, set the flag also to HWP's.
+		// Just switching location flag according LAND altitude mode flag.
+		if(is_terrain_alt_mode > 0)
+		{
+			hwp1.content.location.flags.relative_alt = 0;
+			hwp1.content.location.flags.terrain_alt = 1;
+			
+			hwp2.content.location.flags.relative_alt = 0;
+			hwp2.content.location.flags.terrain_alt = 1;
+			
+			hwp3.content.location.flags.relative_alt = 0;
+			hwp3.content.location.flags.terrain_alt = 1;
+			
+			hwp4.content.location.flags.relative_alt = 0;
+			hwp4.content.location.flags.terrain_alt = 1;
+		}
+
 
 		if(hwp_enabled)
 		{
@@ -640,4 +660,3 @@ bool AP_HeadWindLanding::is_current_cmd_hwp(const AP_Mission::Mission_Command& c
 
     return false;
 }
-

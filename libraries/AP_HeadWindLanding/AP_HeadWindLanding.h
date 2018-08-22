@@ -209,6 +209,9 @@ private:
     // Index of the original landing waypoint
     int16_t idx_landing_wp;
 
+    // Altitude mode
+    uint8_t is_terrain_alt_mode;
+
     // Number of commands contained in the mission
     int16_t num_cmd;
 
