@@ -1202,7 +1202,7 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
 
     case MAVLINK_MSG_ID_REQUEST_DATA_STREAM:
     {
-        handle_request_data_stream(msg, true);
+        handle_request_data_stream(msg, false); // ml: changed to not save the stream change, it can mess up the telemetry!
         break;
     }
 
