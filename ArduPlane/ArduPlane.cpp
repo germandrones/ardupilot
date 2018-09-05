@@ -729,6 +729,14 @@ void Plane::update_flight_mode(void)
         calc_nav_pitch();
         calc_throttle();
         break;
+
+    case SHAPE8:
+        //gcs().send_text(MAV_SEVERITY_INFO, "Effective Mode: Got Shape8 mode");   
+        calc_shape8_target();
+        calc_nav_roll();
+        calc_nav_pitch();
+        calc_throttle();
+        break; 
         
     case TRAINING: {
         training_manual_roll = false;
@@ -925,11 +933,11 @@ void Plane::update_flight_mode(void)
         }
         break;
     }
-        
+            
     case INITIALISING:
         // handled elsewhere
         break;
-    }
+    }    
 }
 
 void Plane::update_navigation()
@@ -995,6 +1003,11 @@ void Plane::update_navigation()
         update_cruise();
         break;
 
+    case SHAPE8:
+        update_loiter(radius);
+        //gcs().send_text(MAV_SEVERITY_INFO, "Control Mode: Got Shape8 mode");   
+        break; 
+
     case MANUAL:
     case STABILIZE:
     case TRAINING:
@@ -1010,9 +1023,14 @@ void Plane::update_navigation()
     case QLOITER:
     case QLAND:
     case QRTL:
+    {
         // nothing to do
         break;
     }
+    
+    
+    
+    }// switch
 }
 
 /*

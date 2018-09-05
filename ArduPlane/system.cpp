@@ -439,6 +439,19 @@ void Plane::set_mode(enum FlightMode mode, mode_reason_t reason)
 		
         break;
 
+    case SHAPE8:
+        gcs().send_text(MAV_SEVERITY_INFO, "System switched to 8 Shape Loitering");
+        auto_throttle_mode = true;
+        auto_navigation_mode = true;
+        do_shape8_at_location();
+		
+        if (g2.soaring_controller.is_active() &&
+            g2.soaring_controller.suppress_throttle()) {
+			g2.soaring_controller.init_thermalling();
+			g2.soaring_controller.get_target(next_WP_loc); // ahead on flight path
+		}
+        break; 
+
     case AVOID_ADSB:
     case GUIDED:
         auto_throttle_mode = true;
@@ -684,6 +697,9 @@ void Plane::notify_flight_mode(enum FlightMode mode)
         break;
     case QRTL:
         notify.set_flight_mode_str("QRTL");
+        break;
+    case SHAPE8:
+        notify.set_flight_mode_str("SHAPE8");
         break;
     default:
         notify.set_flight_mode_str("----");

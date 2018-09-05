@@ -943,6 +943,11 @@ private:
     bool verify_vtol_land(const AP_Mission::Mission_Command &cmd);
     void do_loiter_at_location();
     bool verify_loiter_heading(bool init);
+    
+    struct Location shape8_WP_loc {};
+    void do_shape8_at_location();
+    void calc_shape8_target();
+
     void exit_mission_callback();
     void mavlink_delay(uint32_t ms);
     void read_control_switch();

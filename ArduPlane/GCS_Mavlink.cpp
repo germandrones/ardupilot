@@ -67,6 +67,12 @@ void Plane::send_heartbeat(mavlink_channel_t chan)
         // APM does in any mode, as that is defined as "system finds its own goal
         // positions", which APM does not currently do
         break;
+
+    case SHAPE8: // the same mode as normal LOITER
+        base_mode = MAV_MODE_FLAG_GUIDED_ENABLED |
+                    MAV_MODE_FLAG_STABILIZE_ENABLED;        
+        break; 
+
     case INITIALISING:
         system_status = MAV_STATE_CALIBRATING;
         break;
@@ -2422,6 +2428,7 @@ bool GCS_MAVLINK_Plane::set_mode(const uint8_t mode)
     case QLOITER:
     case QLAND:
     case QRTL:
+    case SHAPE8:
         plane.set_mode((enum FlightMode)mode, MODE_REASON_GCS_COMMAND);
         return true;
     }
