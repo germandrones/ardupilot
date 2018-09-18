@@ -980,13 +980,10 @@ void Plane::do_loiter_at_location()
     next_WP_loc = current_loc;
 }
 
-void Plane::do_shape8_at_location()
+void Plane::do_shape8_loiter_at_location()
 {
-    // here calculate two points
-
     next_WP_loc = current_loc;
-    shape8_WP_loc = next_WP_loc; // store this wp, and only switch betweeen next_WP_loc
-    gcs().send_text(MAV_SEVERITY_INFO, "8Shape Lat: %f, Lng: %f.", next_WP_loc.lat, next_WP_loc.lng);
+    shape8_WP_loc = current_loc;
 }
 
 void Plane::do_change_speed(const AP_Mission::Mission_Command& cmd)

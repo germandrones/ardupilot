@@ -189,43 +189,52 @@ void Plane::calc_shape8_target()
     // calculate new next_WP_loc on the right and left side of shape8_WP_loc
     // check if turn is finished already and switch to other side CW or CCW.
     
-    const int32_t current_bearing_cd = nav_controller->target_bearing_cd();
+    int32_t bearing_err = 10;
+    int32_t heading_cd = gps.ground_course_cd();
     uint16_t radius = (abs(aparm.loiter_radius) <= 1) ? LOITER_RADIUS_DEFAULT : abs(aparm.loiter_radius);
 
-    if(verify_loiter_turns())
+    //first initial calculation
+    if(next_WP_loc.lat == shape8_WP_loc.lat && next_WP_loc.lng == shape8_WP_loc.lng)
+    {
+        shape8_start_heading = 0;//heading_cd;
+        float offset_east =   radius * cos(shape8_start_heading * DEG_TO_RAD);
+        float offset_north = -radius * sin(shape8_start_heading * DEG_TO_RAD);
+        
+        next_WP_loc = location_gps_offset(shape8_WP_loc, offset_east, offset_north);    
+        next_WP_loc.flags.loiter_ccw = 0;
+
+        //gcs().send_text(MAV_SEVERITY_INFO, "heading: %d", heading_cd);
+        //shape8_start_heading = heading_cd;
+        return;
+    }
+
+    if(heading_cd > shape8_start_heading - bearing_err && heading_cd < shape8_start_heading + bearing_err)
     {
         if(next_WP_loc.flags.loiter_ccw == 0)
         {
-            //left side
-            float offset_east = -radius * cos(current_bearing_cd * DEG_TO_RAD);
-            float offset_north = radius * sin(current_bearing_cd * DEG_TO_RAD);
+            //right side
+            float offset_east  = -radius * cos(shape8_start_heading * DEG_TO_RAD);
+            float offset_north =  radius * sin(shape8_start_heading * DEG_TO_RAD);
             
             next_WP_loc = location_gps_offset(shape8_WP_loc, offset_east, offset_north);    
-            next_WP_loc.flags.loiter_ccw = 1; // do right circle clockwise
-            gcs().send_text(MAV_SEVERITY_INFO, "nav target switched.");
+            
+            next_WP_loc.flags.loiter_ccw = 1;
+            loiter.direction = -1;
+            gcs().send_text(MAV_SEVERITY_INFO, "CCW");
 
         }else{
-            //right side
-            float offset_east =   radius * cos(current_bearing_cd * DEG_TO_RAD);
-            float offset_north = -radius * sin(current_bearing_cd * DEG_TO_RAD);
+            //left side
+            float offset_east  =  radius * cos(shape8_start_heading * DEG_TO_RAD);
+            float offset_north = -radius * sin(shape8_start_heading * DEG_TO_RAD);
             
             next_WP_loc = location_gps_offset(shape8_WP_loc, offset_east, offset_north);    
-            next_WP_loc.flags.loiter_ccw = 0; // do right circle clockwise
-            gcs().send_text(MAV_SEVERITY_INFO, "nav target switched.");
+            
+            next_WP_loc.flags.loiter_ccw = 0;
+            loiter.direction = 1;
+            gcs().send_text(MAV_SEVERITY_INFO, "CW");
+
         }
     }
-
-    if(next_WP_loc.lat == shape8_WP_loc.lat && next_WP_loc.lng == shape8_WP_loc.lng)
-    {
-        float offset_east = -radius * cos(current_bearing_cd * DEG_TO_RAD);
-        float offset_north = radius * sin(current_bearing_cd * DEG_TO_RAD);
-            
-        next_WP_loc = location_gps_offset(shape8_WP_loc, offset_east, offset_north);    
-        next_WP_loc.flags.loiter_ccw = 1;
-        //gcs().send_text(MAV_SEVERITY_INFO, "Initial Calc done.");
-    }
-    
-    //gcs().send_text(MAV_SEVERITY_INFO, "calc target Lat: %f, Lng: %f.", next_WP_loc.lat, next_WP_loc.lng);
 }
 
 void Plane::update_loiter(uint16_t radius)

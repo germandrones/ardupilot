@@ -943,11 +943,6 @@ private:
     bool verify_vtol_land(const AP_Mission::Mission_Command &cmd);
     void do_loiter_at_location();
     bool verify_loiter_heading(bool init);
-    
-    struct Location shape8_WP_loc {};
-    void do_shape8_at_location();
-    void calc_shape8_target();
-
     void exit_mission_callback();
     void mavlink_delay(uint32_t ms);
     void read_control_switch();
@@ -986,6 +981,13 @@ private:
     void calc_airspeed_errors();
     void calc_gndspeed_undershoot();
     void update_loiter(uint16_t radius);
+    
+    struct Location shape8_WP_loc;
+    int32_t shape8_start_heading;
+    void update_shape8_loiter(uint16_t radius); // 8 Shape Loiter
+    void calc_shape8_target();
+    void do_shape8_loiter_at_location();
+
     void update_cruise();
     void update_fbwb_speed_height(void);
     void update_fbwc_speed(void);

@@ -443,7 +443,7 @@ void Plane::set_mode(enum FlightMode mode, mode_reason_t reason)
         gcs().send_text(MAV_SEVERITY_INFO, "System switched to 8 Shape Loitering");
         auto_throttle_mode = true;
         auto_navigation_mode = true;
-        do_shape8_at_location();
+        do_shape8_loiter_at_location();
 		
         if (g2.soaring_controller.is_active() &&
             g2.soaring_controller.suppress_throttle()) {

@@ -731,8 +731,6 @@ void Plane::update_flight_mode(void)
         break;
 
     case SHAPE8:
-        //gcs().send_text(MAV_SEVERITY_INFO, "Effective Mode: Got Shape8 mode");   
-        calc_shape8_target();
         calc_nav_roll();
         calc_nav_pitch();
         calc_throttle();
@@ -1004,8 +1002,8 @@ void Plane::update_navigation()
         break;
 
     case SHAPE8:
+        calc_shape8_target();
         update_loiter(radius);
-        //gcs().send_text(MAV_SEVERITY_INFO, "Control Mode: Got Shape8 mode");   
         break; 
 
     case MANUAL:
