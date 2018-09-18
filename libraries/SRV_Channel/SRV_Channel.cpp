@@ -109,9 +109,9 @@ uint16_t SRV_Channel::pwm_from_angle(int16_t scaled_value) const
 
 void SRV_Channel::calc_pwm(int16_t output_scaled)
 {
-/*    if (have_pwm_mask & (1U<<ch_num)) {
+    if (have_pwm_mask & (1U<<ch_num)) {
         return;
-    }*/
+    }
     uint16_t pwm;
     if (type_angle) {
         pwm = pwm_from_angle(output_scaled);
