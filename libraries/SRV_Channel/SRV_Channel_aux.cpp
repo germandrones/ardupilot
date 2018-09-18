@@ -450,11 +450,6 @@ SRV_Channel *SRV_Channels::get_channel_for(SRV_Channel::Aux_servo_function_t fun
 
 void SRV_Channels::set_output_scaled(SRV_Channel::Aux_servo_function_t function, int16_t value)
 {
-	if(function == SRV_Channel::k_throttle)
-	{
-        functions[SRV_Channel::k_throttle].output_scaled = value;
-	}
-
     if (function < SRV_Channel::k_nr_aux_servo_functions) {
         functions[function].output_scaled = value;
         SRV_Channel::have_pwm_mask &= ~functions[function].channel_mask;
